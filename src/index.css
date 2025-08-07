@@ -93,7 +93,7 @@
   
   /* Section header with subtle divider */
   .section-header {
-    @apply flex justify-between items-center pb-4 mb-6 border-b border-gray-100;
+    @apply flex justify-between items-center pb-4  border-gray-100;
   }
   
   .section-title {
