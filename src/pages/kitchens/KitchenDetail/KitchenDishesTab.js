@@ -45,6 +45,13 @@ const KitchenDishesTab = () => {
     Sunday: [],
   });
 
+  // Add state for images at the top of the component
+  const [selectedImages, setSelectedImages] = useState([]);
+  // Add state for audio file at the top of the component
+  const [selectedAudio, setSelectedAudio] = useState(null);
+  // Add state for thumbnail image at the top of the component
+  const [thumbnailImage, setThumbnailImage] = useState(null);
+
   // Fetch kitchen dishes and categories
   useEffect(() => {
     const fetchDishData = async () => {
@@ -254,17 +261,7 @@ const KitchenDishesTab = () => {
                 placeholder="Enter a tag line"
               />
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Dish Price
-              </label>
-              <input
-                type="number"
-               
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                placeholder="Enter a price in PKR"
-              />
-            </div>
+           
             <div className="mb-4">
               <label className="block text-sm font-medium text-neutral-700 mb-1">
                 Dish Preparation Time
@@ -319,10 +316,58 @@ const KitchenDishesTab = () => {
               </label>
             </div>
             <div className="section-header">
-              <span className="section-title">Dish Image Upload</span>
+              <span className="section-title">Pricing</span>
               <div className="flex-1 border-b border-gray-100 ml-4"></div>
             </div>
            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Price
+              </label>
+              <input
+                type="number"
+               
+                className="w-full p-2 border border-neutral-300 rounded-lg"
+                placeholder="Enter a price in PKR"
+              />
+            </div>
+           
+          
+            <div className="section-header">
+              <span className="section-title">Dish Image Upload</span>
+              <div className="flex-1 border-b border-gray-100 ml-4"></div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Thumbnail
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full p-2 border border-neutral-300 rounded-lg"
+                onChange={e => {
+                  const file = e.target.files[0];
+                  setThumbnailImage(file || null);
+                }}
+              />
+              {thumbnailImage && (
+                <div className="mt-4 relative inline-block" style={{ width: '60px', height: '60px' }}>
+                  <img
+                    src={URL.createObjectURL(thumbnailImage)}
+                    alt="thumbnail-preview"
+                    className="object-cover rounded-lg border border-gray-200 w-full h-full"
+                  />
+                  <button
+                    type="button"
+                    className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-gray-100"
+                    style={{ zIndex: 10 }}
+                    onClick={() => setThumbnailImage(null)}
+                  >
+                    <XMarkIcon className="h-4 w-4 text-gray-600" />
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-neutral-700 mb-1">
               Dish Image
@@ -330,9 +375,79 @@ const KitchenDishesTab = () => {
               <input
                 type="file"
                 accept="image/*"
-              
+                multiple
                 className="w-full p-2 border border-neutral-300 rounded-lg"
+                onChange={e => {
+                  const newFiles = Array.from(e.target.files);
+                  setSelectedImages(prev => {
+                    // Combine previous and new files, filter duplicates by name+size, and limit to 10
+                    const combined = [...prev, ...newFiles];
+                    const unique = combined.filter((file, idx, arr) =>
+                      arr.findIndex(f => f.name === file.name && f.size === file.size) === idx
+                    );
+                    return unique.slice(0, 10);
+                  });
+                }}
               />
+              {selectedImages.length > 0 && (
+                <div className="mt-4">
+                  <div className="font-medium text-sm mb-2">Preview</div>
+                  <div className="flex flex-wrap gap-4">
+                    {selectedImages.map((file, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`preview-${idx}`}
+                          className="object-cover rounded-lg border border-gray-200"
+                          style={{ height: '60px', width: '60px' }}
+                        />
+                        <button
+                          type="button"
+                          className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow group-hover:opacity-100 opacity-80 transition"
+                          onClick={() => {
+                            setSelectedImages(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                        >
+                          <XMarkIcon className="h-4 w-4 text-gray-600" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="section-header mt-8">
+              <span className="section-title">Dish Audio</span>
+              <div className="flex-1 border-b border-gray-100 ml-4"></div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Upload Dish Audio 
+              </label>
+              <input
+                type="file"
+                accept="audio/mp3"
+                className="w-full p-2 border border-neutral-300 rounded-lg"
+                onChange={e => {
+                  const file = e.target.files[0];
+               
+                    setSelectedAudio(file);
+                 
+                }}
+              />
+              {selectedAudio && (
+                <div className="mt-3 flex items-center gap-4">
+                  <audio controls src={URL.createObjectURL(selectedAudio)} className="h-8" />
+                  <span className="text-sm text-neutral-700">{selectedAudio.name}</span>
+                  <button
+                    type="button"
+                    className="ml-2 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-gray-100"
+                    onClick={() => setSelectedAudio(null)}
+                  >
+                    <XMarkIcon className="h-4 w-4 text-gray-600" />
+                  </button>
+                </div>
+              )}
             </div>
             <div className="section-header mt-8">
               <span className="section-title">Dish Management</span>
