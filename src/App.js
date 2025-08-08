@@ -29,6 +29,7 @@ import PermissionsDemo from './pages/PermissionsDemo';
 
 // Protected Route Components
 import ProtectedRoute from './components/ProtectedRoute';
+import AddEditDish from './pages/kitchens/KitchenDetail/AddEditDish/AddEditDish';
 
 // Basic Authentication Route Component
 const AuthRoute = ({ children }) => {
@@ -76,6 +77,11 @@ function App() {
           <Route path="/kitchens/:id" element={
             <ProtectedRoute permission="view_kitchens">
               <KitchenDetail />
+            </ProtectedRoute>
+          } />
+           <Route path="/kitchens/:id/AddEditDish" element={
+            <ProtectedRoute permission="view_kitchens">
+              <AddEditDish />
             </ProtectedRoute>
           } />
           

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { XMarkIcon, PencilIcon, EyeIcon,PlusIcon } from '@heroicons/react/24/outline';
+import { useParams, useNavigate } from 'react-router-dom';
 import { kitchenDishService } from '../../../services/kitchens/kitchenDishService';
 import { useAuth } from '../../../context/useAuth';
 import { KitchenContext } from './index';
@@ -9,6 +10,7 @@ import PermissionButton from '../../../components/PermissionButton';
 const KitchenDishesTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   
   // State variables
   const [dishes, setDishes] = useState([]);
@@ -18,39 +20,14 @@ const KitchenDishesTab = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusComment, setStatusComment] = useState('');
   const [newStatus, setNewStatus] = useState('');
-  const [showAddDishModal, setShowAddDishModal] = useState(false);
+
 
   const [filters, setFilters] = useState({
     status: 'all',
     category: 'all'
   });
   const [categories, setCategories] = useState([]);
-  // Customization toggle state
-  const [allowCustomizations, setAllowCustomizations] = useState(false);
-  // Daily order limit toggle and value
-  const [enableDailyOrderLimit, setEnableDailyOrderLimit] = useState(false);
-  const [dailyOrderLimit, setDailyOrderLimit] = useState("");
 
-  const daysOfWeek = [
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
-  ];
-  const timeSlots = ["Breakfast", "Lunch", "Dinner"];
-  const [availability, setAvailability] = useState({
-    Monday: [],
-    Tuesday: [],
-    Wednesday: [],
-    Thursday: [],
-    Friday: [],
-    Saturday: [],
-    Sunday: [],
-  });
-
-  // Add state for images at the top of the component
-  const [selectedImages, setSelectedImages] = useState([]);
-  // Add state for audio file at the top of the component
-  const [selectedAudio, setSelectedAudio] = useState(null);
-  // Add state for thumbnail image at the top of the component
-  const [thumbnailImage, setThumbnailImage] = useState(null);
 
   // Fetch kitchen dishes and categories
   useEffect(() => {
@@ -79,8 +56,7 @@ const KitchenDishesTab = () => {
     setShowDishModal(true);
   };
   const handleAddDish = () => {
-
-    setShowAddDishModal(true);
+    navigate(`/kitchens/${kitchenId}/AddEditDish`);
   };
   // Handle status change
   const handleStatusChange = (dish, status) => {
@@ -221,352 +197,7 @@ const KitchenDishesTab = () => {
         </div>
       </div>
       {/* Dish Add Modal */}
-      {showAddDishModal && (
-        <div className="fixed  inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white overflow-y-auto max-h-[90vh] rounded-xl shadow-lg max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-neutral-900">
-                Add Dish
-              </h3>
-              <button
-                onClick={() => setShowAddDishModal(false)}
-                className="text-neutral-500 hover:text-neutral-700"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="section-header">
-              <span className="section-title">Basic Information</span>
-              <div className="flex-1 border-b border-gray-100 ml-4"></div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Dish Name
-              </label>
-              <input
-                type="text"
-               
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                placeholder="Enter a dish name"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Tag Line
-              </label>
-              <input
-                type="text"
-               
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                placeholder="Enter a tag line"
-              />
-            </div>
-           
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Dish Preparation Time
-              </label>
-              <input
-                type="number"
-               
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                placeholder="Enter a dish preparation time in minutes"
-              />
-            </div>
-            
-            <div className="mb-4">
-
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Dish Preparation Type
-              </label>
-              <select
-              
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-              >
-                <option value="made_only_after_order">Made Only After Order</option>
-                <option value="ready_during_the_day">Ready During the Day</option>
-                <option value="for_special_day">For a Special Day Only</option>
-                <option value="catering_package">Catering Package</option>
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Description
-              </label>
-              <textarea
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                placeholder="Enter a description"
-                rows={3}
-              />
-            </div>
-            {/* Customization toggle */}
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-800">
-                Would you like to allow customers to request customizations for this dish?
-              </span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allowCustomizations}
-                  onChange={e => setAllowCustomizations(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
-                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
-              </label>
-            </div>
-            <div className="section-header">
-              <span className="section-title">Pricing</span>
-              <div className="flex-1 border-b border-gray-100 ml-4"></div>
-            </div>
-           
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Dish Price
-              </label>
-              <input
-                type="number"
-               
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                placeholder="Enter a price in PKR"
-              />
-            </div>
-           
-          
-            <div className="section-header">
-              <span className="section-title">Dish Image Upload</span>
-              <div className="flex-1 border-b border-gray-100 ml-4"></div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Dish Thumbnail
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                onChange={e => {
-                  const file = e.target.files[0];
-                  setThumbnailImage(file || null);
-                }}
-              />
-              {thumbnailImage && (
-                <div className="mt-4 relative inline-block" style={{ width: '60px', height: '60px' }}>
-                  <img
-                    src={URL.createObjectURL(thumbnailImage)}
-                    alt="thumbnail-preview"
-                    className="object-cover rounded-lg border border-gray-200 w-full h-full"
-                  />
-                  <button
-                    type="button"
-                    className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-gray-100"
-                    style={{ zIndex: 10 }}
-                    onClick={() => setThumbnailImage(null)}
-                  >
-                    <XMarkIcon className="h-4 w-4 text-gray-600" />
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Dish Image
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                onChange={e => {
-                  const newFiles = Array.from(e.target.files);
-                  setSelectedImages(prev => {
-                    // Combine previous and new files, filter duplicates by name+size, and limit to 10
-                    const combined = [...prev, ...newFiles];
-                    const unique = combined.filter((file, idx, arr) =>
-                      arr.findIndex(f => f.name === file.name && f.size === file.size) === idx
-                    );
-                    return unique.slice(0, 10);
-                  });
-                }}
-              />
-              {selectedImages.length > 0 && (
-                <div className="mt-4">
-                  <div className="font-medium text-sm mb-2">Preview</div>
-                  <div className="flex flex-wrap gap-4">
-                    {selectedImages.map((file, idx) => (
-                      <div key={idx} className="relative group">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`preview-${idx}`}
-                          className="object-cover rounded-lg border border-gray-200"
-                          style={{ height: '60px', width: '60px' }}
-                        />
-                        <button
-                          type="button"
-                          className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow group-hover:opacity-100 opacity-80 transition"
-                          onClick={() => {
-                            setSelectedImages(prev => prev.filter((_, i) => i !== idx));
-                          }}
-                        >
-                          <XMarkIcon className="h-4 w-4 text-gray-600" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="section-header mt-8">
-              <span className="section-title">Dish Audio</span>
-              <div className="flex-1 border-b border-gray-100 ml-4"></div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Upload Dish Audio 
-              </label>
-              <input
-                type="file"
-                accept="audio/mp3"
-                className="w-full p-2 border border-neutral-300 rounded-lg"
-                onChange={e => {
-                  const file = e.target.files[0];
-               
-                    setSelectedAudio(file);
-                 
-                }}
-              />
-              {selectedAudio && (
-                <div className="mt-3 flex items-center gap-4">
-                  <audio controls src={URL.createObjectURL(selectedAudio)} className="h-8" />
-                  <span className="text-sm text-neutral-700">{selectedAudio.name}</span>
-                  <button
-                    type="button"
-                    className="ml-2 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-gray-100"
-                    onClick={() => setSelectedAudio(null)}
-                  >
-                    <XMarkIcon className="h-4 w-4 text-gray-600" />
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="section-header mt-8">
-              <span className="section-title">Dish Management</span>
-              <div className="flex-1 border-b border-gray-100 ml-4"></div>
-            </div>
-            {/* Replace the Dish Availability section with a table-like UI */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Dish Availability
-              </label>
-              <div className="overflow-x-auto">
-                <table className="min-w-full border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Day</th>
-                      <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Breakfast</th>
-                      <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Lunch</th>
-                      <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Dinner</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {daysOfWeek.map(day => {
-                      const dayEnabled = availability[day].length > 0;
-                      return (
-                        <tr key={day} className="even:bg-white odd:bg-gray-50">
-                          <td className="px-4 py-2 font-medium text-neutral-800 border-b flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={dayEnabled}
-                              onChange={e => {
-                                setAvailability(prev => ({
-                                  ...prev,
-                                  [day]: e.target.checked ? ["Breakfast", "Lunch", "Dinner"] : [],
-                                }));
-                              }}
-                            />
-                            <span>{day}</span>
-                          </td>
-                          {timeSlots.map(slot => (
-                            <td key={slot} className="px-4 py-2 text-center border-b">
-                              <input
-                                type="checkbox"
-                                checked={availability[day].includes(slot)}
-                                onChange={e => {
-                                  setAvailability(prev => {
-                                    const alreadyEnabled = prev[day].length > 0;
-                                    let newSlots;
-                                    if (e.target.checked) {
-                                      newSlots = [...prev[day], slot].filter((v, i, a) => a.indexOf(v) === i);
-                                    } else {
-                                      newSlots = prev[day].filter(s => s !== slot);
-                                    }
-                                    return {
-                                      ...prev,
-                                      [day]: newSlots,
-                                    };
-                                  });
-                                }}
-                                // Allow checking a slot even if day is not enabled, and auto-enable the day
-                                disabled={false}
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-           {/* Daily order limit toggle */}
-           
-           <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-800">
-                Want to set a daily order limit for this dish?
-              </span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enableDailyOrderLimit}
-                  onChange={e => setEnableDailyOrderLimit(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
-                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
-              </label>
-            </div>
-            {enableDailyOrderLimit && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Daily Order Limit
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  className="w-full p-2 border border-neutral-300 rounded-lg"
-                  placeholder="Enter daily order limit"
-                  value={dailyOrderLimit}
-                  onChange={e => setDailyOrderLimit(e.target.value)}
-                />
-              </div>
-            )}
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowAddDishModal(false)}
-                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-            
-                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
-              >
-                Add Dish
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+     
       {/* Dishes List */}
       <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-neutral-200">
