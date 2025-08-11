@@ -3,12 +3,15 @@ import { XMarkIcon, PencilIcon, EyeIcon,PlusIcon, ArrowLeftIcon } from '@heroico
 import { useParams, useNavigate } from 'react-router-dom';
 import PermissionButton from '../../../../components/PermissionButton';
 import {currency} from '../../../../data/Currency/currency'
+import ConfirmationModal from '../../../../components/ConfirmationModal';
 const AddEditDish = () => {
   const { id: kitchenId } = useParams();
   const navigate = useNavigate();
   console.log(currency)
   // Customization toggle state
   const [allowCustomizations, setAllowCustomizations] = useState(false);
+  const [allowNegotiation, setAllowNegotiation] = useState(false);
+
   // Daily order limit toggle and value
   const [enableDailyOrderLimit, setEnableDailyOrderLimit] = useState(false);
   const [dailyOrderLimit, setDailyOrderLimit] = useState("");
@@ -24,6 +27,30 @@ const AddEditDish = () => {
     dailyLimit: '',
     status: 'true'
   });
+  
+  // State for catering package dish names functionality
+  const [showDishNamesModal, setShowDishNamesModal] = useState(false);
+  const [selectedVariationId, setSelectedVariationId] = useState(null);
+  const [dishItemInput, setDishItemInput] = useState('');
+  const [dishDescriptionInput, setDishDescriptionInput] = useState('');
+  const [variationDishNames, setVariationDishNames] = useState({}); // Store dish names for each variation
+  
+  // State for confirmation modals
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [confirmationAction, setConfirmationAction] = useState(null);
+  const [confirmationComment, setConfirmationComment] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
+  
+  // State for add item confirmation
+  const [showAddItemConfirmation, setShowAddItemConfirmation] = useState(false);
+  const [addItemComment, setAddItemComment] = useState('');
+  const [pendingAddItem, setPendingAddItem] = useState(null);
+  
+  // State for variation save confirmation
+  const [showVariationSaveConfirmation, setShowVariationSaveConfirmation] = useState(false);
+  const [variationSaveComment, setVariationSaveComment] = useState('');
+  const [pendingVariationSave, setPendingVariationSave] = useState(null);
+  const [editingVariationId, setEditingVariationId] = useState(null);
   const daysOfWeek = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
   ];
@@ -54,6 +81,7 @@ const AddEditDish = () => {
     navigate(`/kitchens/${kitchenId}`);
   };
   const handleAddVariation = () => {
+    setEditingVariationId(null); // Clear editing state for new variation
     setShowAddVariationModal(true);
     setVariationForm({
       name: '',
@@ -66,11 +94,198 @@ const AddEditDish = () => {
       status: 'true'
     });
   };
+
+  // Handler for editing variation
+  const handleEditVariation = (variation) => {
+    setEditingVariationId(variation.id);
+    setVariationForm({
+      name: variation.name,
+      description: variation.description,
+      unit: variation.unit,
+      quantity: variation.quantity,
+      price: variation.price,
+      perLimit: variation.perLimit,
+      dailyLimit: variation.dailyLimit,
+      status: variation.status
+    });
+    setShowAddVariationModal(true);
+  };
   const handleSaveVariation = () => {
     if (variationForm.name && variationForm.unit && variationForm.price) {
-      setVariations(prev => [...prev, { ...variationForm, id: Date.now() }]);
-      setShowAddVariationModal(false);
+      const variationData = editingVariationId 
+        ? { ...variationForm, id: editingVariationId }
+        : { ...variationForm, id: Date.now() };
+      
+      setPendingVariationSave(variationData);
+      setShowVariationSaveConfirmation(true);
+      setVariationSaveComment('');
     }
+  };
+
+  // Handler for confirming variation save
+  const handleConfirmVariationSave = () => {
+    if (pendingVariationSave && variationSaveComment.trim()) {
+      if (editingVariationId) {
+        // Update existing variation
+        setVariations(prev => prev.map(variation => 
+          variation.id === editingVariationId ? pendingVariationSave : variation
+        ));
+      } else {
+        // Add new variation
+        setVariations(prev => [...prev, pendingVariationSave]);
+        // Initialize empty dish names array for new variation if catering package
+        if (preparationType === 'catering_package') {
+          setVariationDishNames(prev => ({ ...prev, [pendingVariationSave.id]: [] }));
+        }
+      }
+      setShowAddVariationModal(false);
+      setShowVariationSaveConfirmation(false);
+      setVariationSaveComment('');
+      setPendingVariationSave(null);
+      setEditingVariationId(null);
+    }
+  };
+
+  // Handler for canceling variation save
+  const handleCancelVariationSave = () => {
+    setShowVariationSaveConfirmation(false);
+    setVariationSaveComment('');
+    setPendingVariationSave(null);
+  };
+
+  // Handler for opening dish names modal
+  const handleAddDishNames = (variationId) => {
+    setSelectedVariationId(variationId);
+    setShowDishNamesModal(true);
+    setDishItemInput('');
+    setDishDescriptionInput('');
+  };
+
+  // Handler for adding dish item to variation
+  const handleAddDishItem = () => {
+    if (dishItemInput.trim() && selectedVariationId) {
+      const newItem = {
+        id: Date.now(), 
+        name: dishItemInput.trim(), 
+        description: dishDescriptionInput.trim(),
+        status: true // default to active
+      };
+      
+      setPendingAddItem(newItem);
+      setShowAddItemConfirmation(true);
+      setAddItemComment('');
+    }
+  };
+
+  // Handler for confirming add item
+  const handleConfirmAddItem = () => {
+    if (pendingAddItem && addItemComment.trim() && selectedVariationId) {
+      setVariationDishNames(prev => ({
+        ...prev,
+        [selectedVariationId]: [
+          ...(prev[selectedVariationId] || []),
+          pendingAddItem
+        ]
+      }));
+      setDishItemInput('');
+      setDishDescriptionInput('');
+      setShowAddItemConfirmation(false);
+      setAddItemComment('');
+      setPendingAddItem(null);
+    }
+  };
+
+  // Handler for canceling add item
+  const handleCancelAddItem = () => {
+    setShowAddItemConfirmation(false);
+    setAddItemComment('');
+    setPendingAddItem(null);
+  };
+
+  // Handler for toggling dish item status
+  const handleToggleDishStatus = (variationId, dishId) => {
+    const dish = variationDishNames[variationId].find(d => d.id === dishId);
+    const newStatus = !dish.status;
+    
+    setConfirmationAction('status');
+    setPendingAction({ variationId, dishId, newStatus, dishName: dish.name });
+    setShowConfirmationModal(true);
+    setConfirmationComment('');
+  };
+
+  // Handler for confirming status change
+  const handleConfirmStatusChange = () => {
+    if (pendingAction && confirmationComment.trim()) {
+      setVariationDishNames(prev => ({
+        ...prev,
+        [pendingAction.variationId]: prev[pendingAction.variationId].map(dish => 
+          dish.id === pendingAction.dishId ? { ...dish, status: pendingAction.newStatus } : dish
+        )
+      }));
+      setShowConfirmationModal(false);
+      setConfirmationComment('');
+      setPendingAction(null);
+    }
+  };
+
+  // Handler for editing dish item
+  const handleEditDishItem = (dish) => {
+    setDishItemInput(dish.name);
+    setDishDescriptionInput(dish.description || '');
+    // Remove the item from the list so it can be re-added with updated info
+    
+  };
+
+  // Handler for removing dish name
+  const handleRemoveDishName = (variationId, dishId) => {
+    const dish = variationDishNames[variationId].find(d => d.id === dishId);
+    
+    setConfirmationAction('delete');
+    setPendingAction({ variationId, dishId, dishName: dish.name });
+    setShowConfirmationModal(true);
+    setConfirmationComment('');
+  };
+  //handler remove variation
+  const handleRemoveVariation = (variationId) => {
+    const variation = variations.find(v => v.id === variationId);
+    
+    setConfirmationAction('delete');
+    setPendingAction({ variationId, variationName: variation.name });
+    setShowConfirmationModal(true);
+    setConfirmationComment('');
+  };
+
+  // Handler for confirming delete
+  const handleConfirmDelete = () => {
+    if (pendingAction && confirmationComment.trim()) {
+      // Check if it's a variation deletion or dish item deletion
+      if (pendingAction.variationId && !pendingAction.dishId) {
+        // Delete variation
+        setVariations(prev => prev.filter(variation => variation.id !== pendingAction.variationId));
+        // Also remove associated dish names
+        setVariationDishNames(prev => {
+          const newState = { ...prev };
+          delete newState[pendingAction.variationId];
+          return newState;
+        });
+      } else {
+        // Delete dish item
+        setVariationDishNames(prev => ({
+          ...prev,
+          [pendingAction.variationId]: prev[pendingAction.variationId].filter(dish => dish.id !== pendingAction.dishId)
+        }));
+      }
+      setShowConfirmationModal(false);
+      setConfirmationComment('');
+      setPendingAction(null);
+    }
+  };
+
+  // Handler for canceling confirmation
+  const handleCancelConfirmation = () => {
+    setShowConfirmationModal(false);
+    setConfirmationComment('');
+    setPendingAction(null);
   };
 
   const handleVariationFormChange = (e) => {
@@ -223,6 +438,22 @@ const AddEditDish = () => {
               <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
             </label>
           </div>
+          <div className="mb-4 flex items-center justify-between">
+            <span className="text-sm font-medium text-neutral-800">
+              Would you like to allow customers to request negotiation?
+            </span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowNegotiation}
+                onChange={e => setAllowNegotiation(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
+              <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
+            </label>
+          </div>
+           
           <div className="section-header">
             <span className="section-title">Dish Variation</span>
             <div className="flex-1 border-b border-gray-100 ml-4"></div>
@@ -245,26 +476,60 @@ const AddEditDish = () => {
     <h4 className="text-sm font-medium text-neutral-700 mb-3">Variations</h4>
     <div className="space-y-3">
       {variations.map((variation) => (
-        <div key={variation.id} className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex-1">
-            <div className="font-medium text-neutral-900">{variation.name}</div>
-            <div className="text-sm text-neutral-600">{variation.quantity} {variation.unit}</div>
-            <div className="text-xs text-neutral-500 mt-1">{variation.description}</div>
-          </div>
-          <div className="text-center">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              variation.status === 'true' 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {variation.status === 'true' ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-          <div className="text-right">
-            <div className="font-medium text-neutral-900">
-              PKR {variation.price}
+        <div key={variation.id} className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="font-medium text-neutral-900">{variation.name}</div>
+              <div className="text-sm text-neutral-600">{variation.quantity} {variation.unit}</div>
+              <div className="text-xs text-neutral-500 mt-1">{variation.description}</div>
+            </div>
+            <div className="text-center">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                variation.status === 'true' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {variation.status === 'true' ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <div className="font-medium text-neutral-900">
+                  PKR {variation.price}
+                </div>
+              </div>
+              {/* Show + icon only for catering package */}
+              {preparationType === 'catering_package' && (
+                <button
+                  onClick={() => handleAddDishNames(variation.id)}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium flex items-center"
+                  title="Add dish names"
+                >
+                  <PlusIcon className="h-4 w-4 mr-1" />
+                 Catering Package
+                </button>
+              )}
+                <div className="flex items-center justify-center gap-2">
+                                <button
+                                 onClick={() => handleEditVariation(variation)}
+                                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                                  title="Edit variation"
+                                >
+                                  <PencilIcon className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveVariation(variation.id)}
+                                  className="text-red-600 hover:text-red-800 transition-colors"
+                                  title="Remove variation"
+                                >
+                                  <XMarkIcon className="h-4 w-4" />
+                                </button>
+                              </div>
             </div>
           </div>
+          
+          {/* Display dish names if catering package and has dish names */}
+       
         </div>
       ))}
     </div>
@@ -274,9 +539,9 @@ const AddEditDish = () => {
 {showAddVariationModal && (
         <div className="fixed inset-0  bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white h-[90vh] overflow-y-auto  rounded-xl shadow-lg max-w-md w-full p-6">
-            <div className="flex  justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-neutral-900">
-                Add Variation
+                {editingVariationId ? 'Edit Variation' : 'Add Variation'}
               </h3>
               <button
                 onClick={() => setShowAddVariationModal(false)}
@@ -437,7 +702,7 @@ const AddEditDish = () => {
                 onClick={handleSaveVariation}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
               >
-                Save
+                {editingVariationId ? 'Update' : 'Save'}
               </button>
             </div>
           </div>
@@ -676,6 +941,175 @@ const AddEditDish = () => {
             </button>
           </div>
         </div>
+
+        {/* Dish Names Modal for Catering Package */}
+        {showDishNamesModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-neutral-900">
+                  Add Catering Dish Items
+                </h3>
+                <button
+                  onClick={() => setShowDishNamesModal(false)}
+                  className="text-neutral-500 hover:text-neutral-700"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Input Fields */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Catering Dish Item
+                </label>
+                <input
+                  type="text"
+                  value={dishItemInput}
+                  onChange={(e) => setDishItemInput(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg"
+                  placeholder="Enter catering dish item"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={dishDescriptionInput}
+                  onChange={(e) => setDishDescriptionInput(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg"
+                  placeholder="Enter description"
+                  rows={3}
+                />
+              </div>
+
+              {/* Add Button */}
+              <div className="mb-6">
+                <button
+                  onClick={handleAddDishItem}
+                  disabled={!dishItemInput.trim()}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Item
+                </button>
+              </div>
+
+              {/* Table displaying added items */}
+              {selectedVariationId && variationDishNames[selectedVariationId] && variationDishNames[selectedVariationId].length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-neutral-700 mb-3">Added Items</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border border-gray-200 rounded-lg">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Item Name</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Description</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Status</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider border-b">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {variationDishNames[selectedVariationId].map((dish, index) => (
+                          <tr key={dish.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-2 text-sm text-neutral-900 border-b">{dish.name}</td>
+                            <td className="px-4 py-2 text-sm text-neutral-600 border-b">{dish.description || '-'}</td>
+                            <td className="px-4 py-2 text-center border-b">
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={dish.status}
+                                  onChange={() => handleToggleDishStatus(selectedVariationId, dish.id)}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
+                                <div className="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-4"></div>
+                              </label>
+                            </td>
+                            <td className="px-4 py-2 text-center border-b">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handleEditDishItem(dish)}
+                                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                                  title="Edit item"
+                                >
+                                  <PencilIcon className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveDishName(selectedVariationId, dish.id)}
+                                  className="text-red-600 hover:text-red-800 transition-colors"
+                                  title="Remove item"
+                                >
+                                  <XMarkIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDishNamesModal(false)}
+                  className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal for Status Update and Delete */}
+        <ConfirmationModal
+          isOpen={showConfirmationModal}
+          title={confirmationAction === 'status' ? 'Confirm Status Change' : 'Confirm Delete'}
+          message={
+            confirmationAction === 'status' 
+              ? `Are you sure you want to ${pendingAction?.newStatus ? 'activate' : 'deactivate'} "${pendingAction?.dishName}"?`
+              : `Are you sure you want to delete "${pendingAction?.dishName || pendingAction?.variationName}"?`
+          }
+          comment={confirmationComment}
+          onCommentChange={setConfirmationComment}
+          onConfirm={confirmationAction === 'status' ? handleConfirmStatusChange : handleConfirmDelete}
+          onCancel={handleCancelConfirmation}
+          confirmButtonText={confirmationAction === 'status' ? 'Confirm Change' : 'Confirm Delete'}
+          confirmButtonColor="primary"
+        />
+
+        {/* Confirmation Modal for Add Item */}
+        <ConfirmationModal
+          isOpen={showAddItemConfirmation}
+          title="Confirm Add Item"
+          message={`Are you sure you want to add "${pendingAddItem?.name}" to the catering package?`}
+          comment={addItemComment}
+          onCommentChange={setAddItemComment}
+          onConfirm={handleConfirmAddItem}
+          onCancel={handleCancelAddItem}
+          confirmButtonText="Add Item"
+          confirmButtonColor="primary"
+        />
+
+        {/* Confirmation Modal for Variation Save/Update */}
+        <ConfirmationModal
+          isOpen={showVariationSaveConfirmation}
+          title={editingVariationId ? "Confirm Update Variation" : "Confirm Save Variation"}
+          message={editingVariationId 
+            ? `Are you sure you want to update the variation "${pendingVariationSave?.name}"?`
+            : `Are you sure you want to save the new variation "${pendingVariationSave?.name}"?`
+          }
+          comment={variationSaveComment}
+          onCommentChange={setVariationSaveComment}
+          onConfirm={handleConfirmVariationSave}
+          onCancel={handleCancelVariationSave}
+          confirmButtonText={editingVariationId ? "Update Variation" : "Save Variation"}
+          confirmButtonColor="primary"
+        />
       </div>
    
   )
