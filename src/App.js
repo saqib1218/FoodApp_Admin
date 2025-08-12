@@ -20,6 +20,8 @@ import OrderDetail from './pages/orders/OrderDetail';
 import EngagementCenter from './pages/engagement/EngagementCenter';
 import CustomersList from './pages/customers/CustomersList';
 import CustomerDetail from './pages/customers/CustomerDetail';
+import PartenerList from './pages/partener/PartenerList';
+import PartenerDetail from './pages/partener/PartenerDetail';
 import UserDetail from './pages/users/UserDetail';
 import Reports from './pages/reports/Reports';
 import Settings from './pages/settings/Settings';
@@ -111,6 +113,8 @@ function App() {
           
           <Route path="/customers" element={<CustomersList />} />
           <Route path="/customers/:id" element={<CustomerDetail />} />
+          <Route path="/parteners" element={<PartenerList />} />
+          <Route path="/parteners/:id" element={<PartenerDetail />} />
           <Route path="/users/:id" element={
             <ProtectedRoute permission="view_kitchens">
               <UserDetail />
