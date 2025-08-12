@@ -109,7 +109,7 @@ const UserManagementList = () => {
 
   // User management handlers
   const handleCreateUser = () => {
-    setUserForm({ username: '', email: '', password: '', roleId: '', status: 'active' });
+    setUserForm({ username: '', mobileNumber: '', email: '', password: '', roleId: '', status: 'active' });
     setShowCreateUserModal(true);
   };
 
@@ -119,6 +119,7 @@ const UserManagementList = () => {
       const newUser = {
         id: Date.now(),
         username: userForm.username,
+        mobileNumber: userForm.mobileNumber,
         email: userForm.email,
         role: selectedRole,
         status: userForm.status,
@@ -438,7 +439,7 @@ const UserManagementList = () => {
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                          <div className="text-sm text-gray-500">Created {user.createdDate}</div>
+                          <div className="text-sm text-gray-500">{user.mobileNumber}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{user.email}</div>
@@ -708,7 +709,19 @@ const UserManagementList = () => {
                   placeholder="Enter username"
                 />
               </div>
-
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                  Mobile Number
+                </label>
+                <input
+                  type="number"
+                  id="mobileNumber"
+                  value={userForm.mobileNumber}
+                  onChange={(e) => setUserForm({ ...userForm, mobileNumber: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter mobile number"
+                />
+              </div>
               <div>
                 <label htmlFor="userRole" className="block text-sm font-medium text-gray-700 mb-1">
                   Assign Role
