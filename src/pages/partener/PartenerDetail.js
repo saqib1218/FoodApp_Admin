@@ -176,10 +176,10 @@ const PartenerDetail = () => {
                     <PhoneIcon className="h-5 w-5 text-gray-400 mr-2" />
                     <p className="text-gray-900">{partener.phone}</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <p className="text-sm font-medium text-gray-500">Address</p>
                     <p className="mt-1 text-gray-900">{partener.address}</p>
-                  </div>
+                  </div> */}
                   <div>
                     <p className="text-sm font-medium text-gray-500">City</p>
                     <p className="mt-1 text-gray-900">{partener.city}</p>
@@ -324,7 +324,7 @@ const PartenerDetail = () => {
           onClick={handleApprovePartner}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none"
         >
-          Approve Partner
+          Approve KYC
         </button>
       </div>
     </div>
