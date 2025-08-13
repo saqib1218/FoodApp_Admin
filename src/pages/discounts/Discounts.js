@@ -904,105 +904,25 @@ const Discounts = () => {
                   {/* Referral Settings */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h5 className="text-sm font-medium text-gray-900 mb-3">Referral Settings</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Inviter Reward
-                        </label>
-                        <input
-                          type="number"
-                          value={promotionForm.referral.inviterReward}
-                          onChange={(e) => setPromotionForm({
-                            ...promotionForm,
-                            referral: { ...promotionForm.referral, inviterReward: e.target.value }
-                          })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                          placeholder="50"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Invitee Reward
-                        </label>
-                        <input
-                          type="number"
-                          value={promotionForm.referral.inviteeReward}
-                          onChange={(e) => setPromotionForm({
-                            ...promotionForm,
-                            referral: { ...promotionForm.referral, inviteeReward: e.target.value }
-                          })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                          placeholder="25"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Loyalty Settings */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h5 className="text-sm font-medium text-gray-900 mb-3">Loyalty Reward Settings</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Points Required
-                        </label>
-                        <input
-                          type="number"
-                          value={promotionForm.loyalty.pointsRequired}
-                          onChange={(e) => setPromotionForm({
-                            ...promotionForm,
-                            loyalty: { ...promotionForm.loyalty, pointsRequired: e.target.value }
-                          })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                          placeholder="100"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Points Earned
-                        </label>
-                        <input
-                          type="number"
-                          value={promotionForm.loyalty.pointsEarned}
-                          onChange={(e) => setPromotionForm({
-                            ...promotionForm,
-                            loyalty: { ...promotionForm.loyalty, pointsEarned: e.target.value }
-                          })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                          placeholder="10"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Free Item Settings */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h5 className="text-sm font-medium text-gray-900 mb-3">Free Item Settings</h5>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Free Item
+                        Inviter Discount ID
                       </label>
-                      <select
-                        value={promotionForm.freeItem.itemId}
-                        onChange={(e) => {
-                          const selectedItem = mockDishes.find(dish => dish.id === parseInt(e.target.value));
-                          setPromotionForm({
-                            ...promotionForm,
-                            freeItem: { 
-                              itemId: e.target.value, 
-                              itemName: selectedItem ? selectedItem.name : '' 
-                            }
-                          });
-                        }}
+                      <input
+                        type="number"
+                        value={promotionForm.referral.inviterReward}
+                        onChange={(e) => setPromotionForm({
+                          ...promotionForm,
+                          referral: { ...promotionForm.referral, inviterReward: e.target.value }
+                        })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      >
-                        <option value="">Select free item</option>
-                        {mockDishes.map(dish => (
-                          <option key={dish.id} value={dish.id}>{dish.name}</option>
-                        ))}
-                      </select>
+                        placeholder="50"
+                      />
                     </div>
                   </div>
+
+
+
                 </div>
               )}
             </div>

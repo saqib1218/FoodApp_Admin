@@ -22,6 +22,7 @@ const KitchenDiscountsTab = () => {
       type: 'percentage',
       value: 20,
       status: 'active',
+      approvalStatus: 'approved',
       startDate: '2024-01-15',
       endDate: '2024-02-15',
       discountOwnedBy: 'platform',
@@ -45,6 +46,7 @@ const KitchenDiscountsTab = () => {
       type: 'amount',
       value: 100,
       status: 'active',
+      approvalStatus: 'pending',
       startDate: '2024-01-10',
       endDate: '2024-12-31',
       discountOwnedBy: 'kitchen',
@@ -52,6 +54,29 @@ const KitchenDiscountsTab = () => {
       minOrderValue: 500,
       description: 'Rs. 100 off for new customers',
       selectedDishes: [], // Empty means all dishes
+      allKitchenDishes: [
+        { id: 101, name: 'Margherita Pizza', price: 450 },
+        { id: 102, name: 'Pepperoni Pizza', price: 550 },
+        { id: 103, name: 'Veggie Supreme', price: 500 }
+      ]
+    },
+    {
+      id: 3,
+      name: 'Summer Special',
+      displayName: 'Summer 15% Off',
+      type: 'percentage',
+      value: 15,
+      status: 'inactive',
+      approvalStatus: 'rejected',
+      startDate: '2024-06-01',
+      endDate: '2024-08-31',
+      discountOwnedBy: 'kitchen',
+      maxDiscountAmount: 300,
+      minOrderValue: 400,
+      description: '15% off on summer menu items',
+      selectedDishes: [
+        { id: 103, name: 'Veggie Supreme', price: 500 }
+      ],
       allKitchenDishes: [
         { id: 101, name: 'Margherita Pizza', price: 450 },
         { id: 102, name: 'Pepperoni Pizza', price: 550 },
@@ -136,6 +161,23 @@ const KitchenDiscountsTab = () => {
     );
   };
 
+  // Get approval status badge
+  const getApprovalStatusBadge = (approvalStatus) => {
+    const statusConfig = {
+      approved: { label: 'Approved', color: 'bg-green-100 text-green-800' },
+      pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
+      rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' }
+    };
+
+    const config = statusConfig[approvalStatus] || { label: approvalStatus, color: 'bg-gray-100 text-gray-800' };
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
   // Format discount value
   const formatDiscountValue = (discount) => {
     switch (discount.type) {
@@ -178,6 +220,9 @@ const KitchenDiscountsTab = () => {
                   Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Approval Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Discount Value
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -210,6 +255,9 @@ const KitchenDiscountsTab = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(discount.status)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getApprovalStatusBadge(discount.approvalStatus)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -346,16 +394,20 @@ const KitchenDiscountsTab = () => {
                     <div className="text-sm text-gray-900">{selectedDiscount.displayName}</div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500">Description</label>
-                    <div className="text-sm text-gray-900">{selectedDiscount.description}</div>
+                    <label className="text-xs font-medium text-gray-500">Status</label>
+                    <div className="mt-1">{getStatusBadge(selectedDiscount.status)}</div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">Approval Status</label>
+                    <div className="mt-1">{getApprovalStatusBadge(selectedDiscount.approvalStatus)}</div>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-500">Owned By</label>
                     <div className="text-sm text-gray-900 capitalize">{selectedDiscount.discountOwnedBy}</div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500">Status</label>
-                    <div className="mt-1">{getStatusBadge(selectedDiscount.status)}</div>
+                    <label className="text-xs font-medium text-gray-500">Description</label>
+                    <div className="text-sm text-gray-900">{selectedDiscount.description}</div>
                   </div>
                 </div>
               </div>
@@ -426,7 +478,7 @@ const KitchenDiscountsTab = () => {
         <ConfirmationModal
           isOpen={showDeleteModal}
           title="Delete Discount"
-          message={`Are you sure you want to permanently delete the discount "${selectedDiscount.name}"? This action cannot be undone.`}
+          message={`Are you sure you want to permanently delete your Kitchen from "${selectedDiscount.name}" discount? This action cannot be undone.`}
           confirmText="Delete"
           cancelText="Cancel"
           onConfirm={handleConfirmDelete}
