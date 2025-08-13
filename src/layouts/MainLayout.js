@@ -17,7 +17,10 @@ import {
   ArrowRightOnRectangleIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  TagIcon,
+  UserGroupIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 
 const MainLayout = () => {
@@ -54,10 +57,11 @@ const MainLayout = () => {
     { name: 'Kitchens', href: '/kitchens', icon: BuildingStorefrontIcon, permission: 'view_kitchens' },
     { name: 'Onboarding Queue', href: '/onboarding', icon: QueueListIcon, permission: 'view_kitchens' },
     { name: 'Orders', href: '/orders', icon: ShoppingBagIcon, permission: 'view_orders' },
+    { name: 'Discounts', href: '/discounts', icon: TagIcon, permission: 'view_orders' },
     { name: 'Engagement', href: '/engagement', icon: ChatBubbleLeftRightIcon, permission: 'send_broadcast' },
     { name: 'Customers', href: '/customers', icon: UsersIcon, permission: null }, // Always visible for now
-    { name: 'Parteners', href: '/parteners', icon: UsersIcon, permission: null },
-    { name: 'Users', href: '/users', icon: UsersIcon, permission: null }, // Always visible for now  // Always visible for now 
+    { name: 'Partners', href: '/parteners', icon: BuildingOfficeIcon, permission: null },
+    { name: 'Users', href: '/users', icon: UserGroupIcon, permission: null }, // Always visible for now  // Always visible for now 
     { name: 'Reports', href: '/reports', icon: ChartBarIcon, permission: null }, // Always visible for now
     { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, permission: null }, // Always visible for now
     { name: 'Permissions Demo', href: '/permissions-demo', icon: ShieldCheckIcon, permission: null }, // Demo page for RBAC

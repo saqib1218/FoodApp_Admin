@@ -29,7 +29,7 @@ import Settings from './pages/settings/Settings';
 import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import PermissionsDemo from './pages/PermissionsDemo';
-
+import Discounts from './pages/discounts/Discounts';
 // Protected Route Components
 import ProtectedRoute from './components/ProtectedRoute';
 import AddEditDish from './pages/kitchens/KitchenDetail/AddEditDish/AddEditDish';
@@ -116,6 +116,7 @@ function App() {
           <Route path="/customers/:id" element={<CustomerDetail />} />
           <Route path="/parteners" element={<PartenerList />} />
           <Route path="/users" element={<UserManagementList />} />
+          <Route path="/discounts" element={<Discounts />} />
           <Route path="/parteners/:id" element={<PartenerDetail />} />
           <Route path="/users/:id" element={
             <ProtectedRoute permission="view_kitchens">

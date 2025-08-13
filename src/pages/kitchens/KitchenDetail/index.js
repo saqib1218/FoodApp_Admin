@@ -15,6 +15,7 @@ import KitchenAvailabilityTab from './KitchenAvailabilityTab';
 import KitchenDishesTab from './KitchenDishesTab';
 import KitchenAnalyticsTab from './KitchenAnalyticsTab';
 import KitchenOrdersTab from './KitchenOrdersTab';
+import KitchenDiscountsTab from './KitchenDiscountsTab';
 
 // Create context for sharing kitchen data across tabs
 export const KitchenContext = createContext(null);
@@ -144,6 +145,7 @@ const KitchenDetail = () => {
     addresses: <KitchenAddressesTab />,
     availability: <KitchenAvailabilityTab />,
     dishes: <KitchenDishesTab />,
+    discounts: <KitchenDiscountsTab />,
     analytics: <KitchenAnalyticsTab />,
     orders: hasPermission('view_orders') ? <KitchenOrdersTab /> : null
   };
@@ -285,7 +287,16 @@ const KitchenDetail = () => {
             >
               Dishes
             </button>
-            
+            <button
+              onClick={() => handleTabChange('discounts')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'discounts'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+              }`}
+            >
+             Discounts
+            </button>
             <button
               onClick={() => handleTabChange('analytics')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
