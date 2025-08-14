@@ -142,6 +142,50 @@ const CustomerDetail = () => {
     ]
   });
 
+  // Customer engagement data
+  const [engagementData, setEngagementData] = useState([
+    {
+      id: 1,
+      type: 'query',
+      title: 'Send a Query',
+      message: 'Customer inquired about delivery time for their order from Pizza Palace. They wanted to know if they could get faster delivery.',
+      dateTime: '2024-01-12 14:30:00',
+      status: 'resolved'
+    },
+    {
+      id: 2,
+      type: 'message',
+      title: 'Send a Message',
+      message: 'Welcome message sent to customer after their first successful order. Included information about loyalty program and upcoming offers.',
+      dateTime: '2024-01-10 10:15:00',
+      status: 'sent'
+    },
+    {
+      id: 3,
+      type: 'query',
+      title: 'Send a Query',
+      message: 'Customer asked about vegetarian options available at Sushi Master. Provided detailed menu information and dietary preferences.',
+      dateTime: '2024-01-08 16:45:00',
+      status: 'resolved'
+    },
+    {
+      id: 4,
+      type: 'message',
+      title: 'Send a Message',
+      message: 'Birthday wishes and special discount code sent to customer. Included personalized offer for their favorite kitchen.',
+      dateTime: '2024-01-05 09:00:00',
+      status: 'sent'
+    },
+    {
+      id: 5,
+      type: 'query',
+      title: 'Send a Query',
+      message: 'Customer reported issue with missing items in their Burger House order. Issue was resolved with refund and replacement.',
+      dateTime: '2024-01-03 19:20:00',
+      status: 'resolved'
+    }
+  ]);
+
   // Categories and subcategories data
   const categoriesData = {
     'Occasion': ['Eid', 'Ramadan', 'Birthday', 'Anniversary', 'Other'],
@@ -504,19 +548,76 @@ const CustomerDetail = () => {
 
         {activeTab === 'engagement' && (
           <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Customer Engagement</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-700">
-                This tab will display customer engagement data including communication history, support tickets, and feedback.
-              </p>
-              <div className="mt-4">
-                <Link
-                  to={`/engagement?customer=${customer.id}`}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Customer Engagement</h2>
+            <div className="space-y-4">
+              {engagementData.map((engagement) => (
+                <div
+                  key={engagement.id}
+                  className={`border rounded-lg p-4 ${
+                    engagement.type === 'query'
+                      ? 'border-blue-200 bg-blue-50'
+                      : 'border-green-200 bg-green-50'
+                  }`}
                 >
-                  Open in Engagement Center
-                </Link>
-              </div>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <div className={`flex-shrink-0 h-2 w-2 rounded-full mr-3 ${
+                          engagement.type === 'query' ? 'bg-blue-400' : 'bg-green-400'
+                        }`}></div>
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {engagement.title}
+                        </h3>
+                        <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          engagement.status === 'resolved'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {engagement.status === 'resolved' ? 'Resolved' : 'Sent'}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 mb-3">
+                        {engagement.message}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center text-sm text-gray-500">
+                          <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {new Date(engagement.dateTime).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })} at {new Date(engagement.dateTime).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        <Link
+                          to={`/engagement/${engagement.id}`}
+                          className={`text-sm font-medium hover:underline ${
+                            engagement.type === 'query'
+                              ? 'text-blue-600 hover:text-blue-800'
+                              : 'text-green-600 hover:text-green-800'
+                          }`}
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {engagementData.length === 0 && (
+                <div className="text-center py-8">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No engagement history</h3>
+                  <p className="mt-1 text-sm text-gray-500">No messages or queries have been exchanged with this customer yet.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
