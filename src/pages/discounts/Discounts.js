@@ -87,7 +87,7 @@ const Discounts = () => {
     deliveryZones: [],
     
     // Section C: Type-Specific Settings
-    promoCode: {
+    voucherCode: {
       code: '',
       caseSensitive: false,
       usageLimit: '',
@@ -128,7 +128,7 @@ const Discounts = () => {
         status: promotionForm.status,
         startDate: promotionForm.startDate,
         endDate: promotionForm.endDate,
-        promoCode: promotionForm.promoCode.code,
+        voucherCode: promotionForm.voucherCode.code,
         minOrderAmount: parseFloat(promotionForm.minOrderValue) || 0,
         description: promotionForm.description,
         promotionData: promotionForm // Store full promotion data
@@ -567,11 +567,11 @@ const Discounts = () => {
                         onChange={(e) => setPromotionForm({ ...promotionForm, promotionType: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       >
-                        <option value="discount">Discount</option>
-                        <option value="cashback">Cashback</option>
-                        <option value="freeItem">Free Item</option>
-                        <option value="referral">Referral</option>
-                        <option value="loyalty">Loyalty Reward</option>
+                        <option value="standard">Standard</option>
+                        <option value="pre_order">Pre-Order</option>
+                        <option value="target_base">Target Base</option>
+                        <option value="voucher">Voucher</option>
+              
                       </select>
                     </div>
 
@@ -668,9 +668,18 @@ const Discounts = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
-                  </div>
-
-                  <div>
+                    <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={promotionForm.autoApply}
+                        onChange={(e) => setPromotionForm({ ...promotionForm, autoApply: e.target.checked })}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Auto Apply</span>
+                    </label>
+                    </div>
+                    <div>
                     <label className="flex items-center">
                       <input
                         type="checkbox"
@@ -681,6 +690,9 @@ const Discounts = () => {
                       <span className="ml-2 text-sm text-gray-700">Stackable with other promotions</span>
                     </label>
                   </div>
+                  </div>
+
+                 
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -730,7 +742,7 @@ const Discounts = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Customer Type
+                        Audience Rule
                       </label>
                       <select
                         value={promotionForm.customerType}
@@ -739,7 +751,7 @@ const Discounts = () => {
                       >
                         <option value="all">All Customers</option>
                         <option value="new">New Customers</option>
-                        <option value="existing">Existing Customers</option>
+                        <option value="last_order_3_hours">Last order in 3 hours</option>
                       </select>
                     </div>
                   </div>
@@ -856,14 +868,14 @@ const Discounts = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Promo Code
+                          Voucher Code
                         </label>
                         <input
                           type="text"
-                          value={promotionForm.promoCode.code}
+                          value={promotionForm.voucherCode.code}
                           onChange={(e) => setPromotionForm({
                             ...promotionForm,
-                            promoCode: { ...promotionForm.promoCode, code: e.target.value.toUpperCase() }
+                            voucherCode: { ...promotionForm.voucherCode, code: e.target.value.toUpperCase() }
                           })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                           placeholder="SAVE20"
@@ -875,10 +887,10 @@ const Discounts = () => {
                         </label>
                         <input
                           type="number"
-                          value={promotionForm.promoCode.usageLimit}
+                          value={promotionForm.voucherCode.usageLimit}
                           onChange={(e) => setPromotionForm({
                             ...promotionForm,
-                            promoCode: { ...promotionForm.promoCode, usageLimit: e.target.value }
+                            voucherCode: { ...promotionForm.voucherCode, usageLimit: e.target.value }
                           })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                           placeholder="100"
@@ -889,10 +901,10 @@ const Discounts = () => {
                       <label className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={promotionForm.promoCode.caseSensitive}
+                          checked={promotionForm.voucherCode.caseSensitive}
                           onChange={(e) => setPromotionForm({
                             ...promotionForm,
-                            promoCode: { ...promotionForm.promoCode, caseSensitive: e.target.checked }
+                            voucherCode: { ...promotionForm.voucherCode, caseSensitive: e.target.checked }
                           })}
                           className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
