@@ -3,7 +3,7 @@ import { kitchenUserService } from '../../../services/kitchens/kitchenUserServic
 import { useAuth } from '../../../context/useAuth';
 import { PermissionButton } from '../../../components/PermissionButton';
 import { KitchenContext } from './index';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 
 const KitchenUsersTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
@@ -22,6 +22,14 @@ const KitchenUsersTab = () => {
   const [showUserDocumentsModal, setShowUserDocumentsModal] = useState(false);
   const [userDocuments, setUserDocuments] = useState([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  
+  // Invite user states
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
 
   // Fetch kitchen users
   useEffect(() => {
@@ -39,6 +47,67 @@ const KitchenUsersTab = () => {
 
     fetchKitchenUsers();
   }, [kitchenId]);
+
+  // Generate random 5-digit code
+  const generateInviteCode = () => {
+    return Math.floor(10000 + Math.random() * 90000).toString();
+  };
+
+  // Handle invite user
+  const handleInviteUser = () => {
+    setInviteName('');
+    setInvitePhone('');
+    setShowInviteModal(true);
+  };
+
+  // Submit invite
+  const handleSubmitInvite = () => {
+    if (!inviteName.trim() || !invitePhone.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    // Generate code and show code modal
+    const code = generateInviteCode();
+    setGeneratedCode(code);
+    setShowInviteModal(false);
+    setShowCodeModal(true);
+
+    // Add user to table with pending status
+    const newUser = {
+      id: Date.now(), // Temporary ID
+      name: inviteName,
+      phone: invitePhone,
+      role: 'Staff',
+      status: 'pending',
+      pinBlocked: false,
+      trustedDevices: []
+    };
+
+    setKitchenUsers([...kitchenUsers, newUser]);
+  };
+
+  // Copy code to clipboard
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setIsCopied(true);
+      // Reset after 2 seconds
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+      alert('Failed to copy code');
+    }
+  };
+
+  // Close code modal
+  const handleCloseCodeModal = () => {
+    setShowCodeModal(false);
+    setGeneratedCode('');
+    setInviteName('');
+    setInvitePhone('');
+    setIsCopied(false);
+  };
 
   // Handle status update
   const handleStatusUpdate = (user, status) => {
@@ -186,10 +255,21 @@ const KitchenUsersTab = () => {
   return (
     <div>
       <div className="mb-6">
-        <h3 className="text-lg font-medium text-neutral-900">Kitchen Users</h3>
-        <p className="mt-1 text-sm text-neutral-500">
-          Manage users associated with this kitchen.
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-medium text-neutral-900">Kitchen Users</h3>
+            <p className="mt-1 text-sm text-neutral-500">
+              Manage users associated with this kitchen.
+            </p>
+          </div>
+          <button
+            onClick={handleInviteUser}
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            <UserPlusIcon className="h-4 w-4 mr-2" />
+            Invite User
+          </button>
+        </div>
       </div>
 
       {kitchenUsers.length === 0 ? (
@@ -231,7 +311,7 @@ const KitchenUsersTab = () => {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-neutral-900">{user.name}</div>
-                        <div className="text-sm text-neutral-500">{user.email}</div>
+                        <div className="text-sm text-neutral-500">{user.phone || user.email}</div>
                       </div>
                     </div>
                   </td>
@@ -348,7 +428,7 @@ const KitchenUsersTab = () => {
                 onClick={confirmStatusUpdate}
                 className={`px-4 py-2 rounded-full text-white text-sm font-medium ${
                   newStatus === 'active' 
-                    ? 'bg-green-600 hover:bg-green-700' 
+                    ? 'bg-primary-600 hover:bg-primary-700' 
                     : newStatus === 'suspended'
                     ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-primary-600 hover:bg-primary-700'
@@ -511,6 +591,117 @@ const KitchenUsersTab = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Invite User Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Invite User
+              </h3>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="text-neutral-500 hover:text-neutral-700"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter user name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  value={invitePhone}
+                  onChange={(e) => setInvitePhone(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter mobile number"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitInvite}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Code Generation Modal */}
+      {showCodeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              
+              <h3 className="text-lg font-medium text-neutral-900 mb-2">
+                Invitation Code Generated
+              </h3>
+              
+              <p className="text-sm text-neutral-500 mb-6">
+                Share this 5-digit code with the user to complete their registration.
+              </p>
+              
+              <div className="bg-neutral-50 rounded-lg p-4 mb-6">
+                <div className="text-3xl font-bold text-primary-600 tracking-wider">
+                  {generatedCode}
+                </div>
+              </div>
+              
+              <div className="flex justify-center space-x-3">
+                <button
+                  onClick={handleCopyCode}
+                  className={`inline-flex items-center px-4 py-2 rounded-full transition-colors text-sm font-medium ${
+                    isCopied 
+                      ? 'bg-green-600 text-white hover:bg-green-700' 
+                      : 'bg-primary-600 text-white hover:bg-primary-700'
+                  }`}
+                >
+                  <ClipboardDocumentIcon className="h-4 w-4 mr-2" />
+                  {isCopied ? 'Copied' : 'Copy Code'}
+                </button>
+                <button
+                  onClick={handleCloseCodeModal}
+                  className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
