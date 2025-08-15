@@ -20,7 +20,8 @@ import {
   ShieldCheckIcon,
   TagIcon,
   UserGroupIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  ChatBubbleBottomCenterTextIcon
 } from '@heroicons/react/24/outline';
 
 const MainLayout = () => {
@@ -59,6 +60,7 @@ const MainLayout = () => {
     { name: 'Orders', href: '/orders', icon: ShoppingBagIcon, permission: 'view_orders' },
     { name: 'Discounts', href: '/discounts', icon: TagIcon, permission: 'view_orders' },
     { name: 'Engagement', href: '/engagement', icon: ChatBubbleLeftRightIcon, permission: 'send_broadcast' },
+    { name: 'Feedback', href: '/feedback', icon: ChatBubbleBottomCenterTextIcon, permission: null }, // Always visible for now
     { name: 'Customers', href: '/customers', icon: UsersIcon, permission: null }, // Always visible for now
     { name: 'Partners', href: '/parteners', icon: BuildingOfficeIcon, permission: null },
     { name: 'Users', href: '/users', icon: UserGroupIcon, permission: null }, // Always visible for now  // Always visible for now 
