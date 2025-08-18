@@ -140,12 +140,12 @@ const KitchensList = () => {
           />
         </div>
         <div className="flex space-x-2 w-full sm:w-auto">
-          <Link
+          {/* <Link
             to="/kitchens/onboarding"
             className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors text-sm font-medium"
           >
             Onboarding Queue
-          </Link>
+          </Link> */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors text-sm font-medium inline-flex items-center"

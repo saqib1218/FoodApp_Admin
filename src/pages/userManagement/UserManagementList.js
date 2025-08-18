@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon, EyeSlashIcon, KeyIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 const UserManagementList = () => {
@@ -19,12 +19,20 @@ const UserManagementList = () => {
   // User management state
   const [users, setUsers] = useState([]);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [userForm, setUserForm] = useState({
     username: '',
     email: '',
     password: '',
+    mobileNumber: '',
     roleId: '',
     status: 'active'
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    newPassword: '',
+    confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -109,26 +117,95 @@ const UserManagementList = () => {
 
   // User management handlers
   const handleCreateUser = () => {
-    setUserForm({ username: '', mobileNumber: '', email: '', password: '', roleId: '', status: 'active' });
+    setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
     setShowCreateUserModal(true);
   };
 
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setUserForm({
+      username: user.username,
+      email: user.email,
+      mobileNumber: user.mobileNumber || '',
+      roleId: user.roleId,
+      status: user.status,
+      password: '' // Don't populate password for editing
+    });
+    setShowEditUserModal(true);
+  };
+
+  const handleChangePassword = (user) => {
+    setEditingUser(user);
+    setPasswordForm({
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setShowChangePasswordModal(true);
+  };
+
   const handleSaveUser = () => {
-    if (userForm.username.trim() && userForm.email.trim() && userForm.password.trim() && userForm.roleId) {
-      const selectedRole = roles.find(r => r.id === parseInt(userForm.roleId));
+    if (userForm.username && userForm.email && userForm.password && userForm.roleId) {
+      const selectedRole = roles.find(role => role.id === parseInt(userForm.roleId));
       const newUser = {
         id: Date.now(),
         username: userForm.username,
-        mobileNumber: userForm.mobileNumber,
         email: userForm.email,
+        mobileNumber: userForm.mobileNumber,
+        roleId: parseInt(userForm.roleId),
         role: selectedRole,
         status: userForm.status,
-        createdDate: new Date().toISOString().split('T')[0]
+        createdAt: new Date().toISOString()
       };
-      setUsers(prev => [...prev, newUser]);
+      setUsers([...users, newUser]);
       setShowCreateUserModal(false);
-      setUserForm({ username: '', email: '', password: '', roleId: '', status: 'active' });
+      setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
     }
+  };
+
+  const handleUpdateUser = () => {
+    if (userForm.username && userForm.email && userForm.roleId && editingUser) {
+      const selectedRole = roles.find(role => role.id === parseInt(userForm.roleId));
+      const updatedUsers = users.map(user => 
+        user.id === editingUser.id 
+          ? {
+              ...user,
+              username: userForm.username,
+              email: userForm.email,
+              mobileNumber: userForm.mobileNumber,
+              roleId: parseInt(userForm.roleId),
+              role: selectedRole,
+              status: userForm.status
+            }
+          : user
+      );
+      setUsers(updatedUsers);
+      setShowEditUserModal(false);
+      setEditingUser(null);
+      setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+    }
+  };
+
+  const handleUpdatePassword = () => {
+    // Validate passwords
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert('New passwords do not match');
+      return;
+    }
+    
+    if (passwordForm.newPassword.length < 6) {
+      alert('New password must be at least 6 characters long');
+      return;
+    }
+
+    // Here you would typically make an API call to update the password
+    // For now, we'll just show a success message
+    alert('Password updated successfully');
+    setShowChangePasswordModal(false);
+    setEditingUser(null);
+    setPasswordForm({
+      newPassword: '',
+      confirmPassword: ''
+    });
   };
 
   const handleCancelUser = () => {
@@ -454,8 +531,19 @@ const UserManagementList = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
-                            <button className="text-blue-600 hover:text-blue-900 transition-colors" title="Edit user">
+                            <button 
+                              onClick={() => handleEditUser(user)}
+                              className="text-blue-600 hover:text-blue-900 transition-colors" 
+                              title="Edit user"
+                            >
                               <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleChangePassword(user)}
+                              className="text-yellow-600 hover:text-yellow-900 transition-colors" 
+                              title="Change password"
+                            >
+                              <KeyIcon className="h-4 w-4" />
                             </button>
                             <button 
                               onClick={() => handleDeleteUser(user.id)}
@@ -809,6 +897,181 @@ const UserManagementList = () => {
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 Save User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">Edit User</h3>
+              <button onClick={() => setShowEditUserModal(false)} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="editUsername" className="block text-sm font-medium text-gray-700 mb-1">
+                  User Name
+                </label>
+                <input
+                  type="text"
+                  id="editUsername"
+                  value={userForm.username}
+                  onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter username"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="editMobileNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                  Mobile Number
+                </label>
+                <input
+                  type="text"
+                  id="editMobileNumber"
+                  value={userForm.mobileNumber}
+                  onChange={(e) => setUserForm({ ...userForm, mobileNumber: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter mobile number"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="editEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="editEmail"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter email"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="editRole" className="block text-sm font-medium text-gray-700 mb-1">
+                  Role
+                </label>
+                <select
+                  id="editRole"
+                  value={userForm.roleId}
+                  onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Select a role</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="editUserStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  id="editUserStatus"
+                  value={userForm.status}
+                  onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowEditUserModal(false)}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                disabled={!userForm.username.trim() || !userForm.email.trim() || !userForm.roleId}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                Update User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">Change Password</h3>
+              <button onClick={() => setShowChangePasswordModal(false)} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                Changing password for: <span className="font-medium">{editingUser?.username}</span>
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter new password (min. 6 characters)"
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Confirm new password"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowChangePasswordModal(false)}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdatePassword}
+                disabled={!passwordForm.newPassword || !passwordForm.confirmPassword}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                Change Password
               </button>
             </div>
           </div>

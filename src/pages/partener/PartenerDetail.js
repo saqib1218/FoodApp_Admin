@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const PartenerDetail = () => {
   const { id } = useParams();
@@ -10,11 +11,38 @@ const PartenerDetail = () => {
   
   // Kitchen creation modal state
   const [showKitchenModal, setShowKitchenModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [confirmationComment, setConfirmationComment] = useState('');
   const [kitchenForm, setKitchenForm] = useState({
     name: '',
-    tagline: ''
+    tagline: '',
+    approvalStatus: 'Pending for approval'
   });
+  const [kitchenNameError, setKitchenNameError] = useState('');
   const [kitchenInfo, setKitchenInfo] = useState(null);
+
+  // ID Verification edit modal state
+  const [showIdEditModal, setShowIdEditModal] = useState(false);
+  const [idForm, setIdForm] = useState({
+    documentNumber: '42101-1234567-8',
+    expiryDate: '2028-05-15'
+  });
+
+  // Validate kitchen name - max 14 words, no symbols
+  const validateKitchenName = (name) => {
+    // Regex to allow only letters, numbers, and spaces
+    const symbolRegex = /^[a-zA-Z0-9\s]+$/;
+    // Check if name contains only allowed characters
+    if (!symbolRegex.test(name) && name.trim() !== '') {
+      return 'Kitchen name cannot contain symbols or special characters';
+    }
+    // Check word count (split by spaces and filter empty strings)
+    const wordCount = name.trim().split(/\s+/).filter(word => word.length > 0).length;
+    if (wordCount > 14) {
+      return 'Kitchen name cannot exceed 14 words';
+    }
+    return '';
+  };
 
   useEffect(() => {
     // This would be replaced with an API call in production
@@ -43,25 +71,64 @@ const PartenerDetail = () => {
   }, [id]);
 
   // Handle kitchen creation
-  const handleCreateKitchen = () => {
+  const handleOpenKitchenModal = () => {
     setShowKitchenModal(true);
   };
 
-  const handleSaveKitchen = () => {
-    if (kitchenForm.name.trim() && kitchenForm.tagline.trim()) {
-      setKitchenInfo({
-        name: kitchenForm.name,
-        tagline: kitchenForm.tagline,
-        createdDate: new Date().toISOString().split('T')[0]
-      });
-      setShowKitchenModal(false);
-      setKitchenForm({ name: '', tagline: '' });
+  const handleCreateKitchen = () => {
+    const nameError = validateKitchenName(kitchenForm.name);
+    setKitchenNameError(nameError);
+    
+    if (kitchenForm.name.trim() && !nameError) {
+      setShowConfirmationModal(true);
     }
+  };
+
+  const handleConfirmCreateKitchen = () => {
+    setKitchenInfo({
+      name: kitchenForm.name,
+      tagline: kitchenForm.tagline,
+      approvalStatus: kitchenForm.approvalStatus,
+      createdDate: new Date().toISOString().split('T')[0],
+      comment: confirmationComment
+    });
+    setShowKitchenModal(false);
+    setShowConfirmationModal(false);
+    setKitchenForm({ name: '', tagline: '', approvalStatus: 'Pending for approval' });
+    setKitchenNameError('');
+    setConfirmationComment('');
+  };
+
+  const handleCancelConfirmation = () => {
+    setShowConfirmationModal(false);
+    setConfirmationComment('');
   };
 
   const handleCancelKitchen = () => {
     setShowKitchenModal(false);
-    setKitchenForm({ name: '', tagline: '' });
+    setKitchenForm({ name: '', tagline: '', approvalStatus: 'Pending for approval' });
+    setKitchenNameError('');
+  };
+
+  // Handle ID verification edit
+  const handleOpenIdEditModal = () => {
+    setShowIdEditModal(true);
+  };
+
+  const handleSaveIdChanges = () => {
+    // In a real app, this would call an API to update the ID information
+    console.log('Saving ID changes:', idForm);
+    alert('ID information updated successfully!');
+    setShowIdEditModal(false);
+  };
+
+  const handleCancelIdEdit = () => {
+    setShowIdEditModal(false);
+    // Reset form to original values
+    setIdForm({
+      documentNumber: '42101-1234567-8',
+      expiryDate: '2028-05-15'
+    });
   };
 
   const handleApprovePartner = () => {
@@ -157,6 +224,16 @@ const PartenerDetail = () => {
           >
             ID Verification
           </button>
+          <button
+            onClick={() => setActiveTab('activities')}
+            className={`${
+              activeTab === 'activities'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Activities
+          </button>
         </nav>
       </div>
 
@@ -180,18 +257,15 @@ const PartenerDetail = () => {
                     <p className="text-sm font-medium text-gray-500">Address</p>
                     <p className="mt-1 text-gray-900">{partener.address}</p>
                   </div> */}
-                  <div>
+                  {/* <div>
                     <p className="text-sm font-medium text-gray-500">City</p>
                     <p className="mt-1 text-gray-900">{partener.city}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Pin Setup</p>
-                    <p className="mt-1">{getStatusBadge(partener.Pin)}</p>
-                  </div>
+                  </div> */}
+                  
                 </div>
               </div>
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Account Information</h2>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Profile Information</h2>
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Joined Date</p>
@@ -200,6 +274,10 @@ const PartenerDetail = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-500">Status</p>
                     <p className="mt-1">{getStatusBadge(partener.status)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">PIN Status</p>
+                    <p className="mt-1">{getStatusBadge(partener.Pin)}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">KYC Verified</p>
@@ -218,7 +296,7 @@ const PartenerDetail = () => {
               <h2 className="text-lg font-medium text-gray-900">Kitchen Information</h2>
               {!kitchenInfo && (
                 <button
-                  onClick={handleCreateKitchen}
+                  onClick={handleOpenKitchenModal}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   Create Kitchen
@@ -273,7 +351,7 @@ const PartenerDetail = () => {
           <input
             type="text"
             disabled
-            value="42101-1234567-8"
+            value={idForm.documentNumber}
             className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
           />
         </div>
@@ -282,14 +360,22 @@ const PartenerDetail = () => {
           <input
             type="text"
             disabled
-            value="2028-05-15"
+            value={idForm.expiryDate}
             className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
           />
         </div>
       </div>
 
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-sm font-medium text-gray-500">Media Files</h3>
+        <button
+          onClick={handleOpenIdEditModal}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        >
+          Edit
+        </button>
+      </div>
       <div className="mb-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-4">Media Files</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-gray-500 mb-2">Front Side</p>
@@ -330,6 +416,114 @@ const PartenerDetail = () => {
     </div>
   </div>
 )}
+
+        {activeTab === 'activities' && (
+          <div className="p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Partner Activities</h2>
+            
+            {/* Activity Timeline */}
+            <div className="flow-root">
+              <ul className="-mb-8">
+                {/* Mock activity data - in real app this would come from API */}
+                {[
+                  {
+                    id: 1,
+                    type: 'feedback',
+                    title: 'User provided feedback',
+                    description: 'Submitted feedback about order delivery experience',
+                    timestamp: '2024-01-15 14:30',
+                    icon: '💬',
+                    bgColor: 'bg-blue-100',
+                    iconColor: 'text-blue-600'
+                  },
+                  {
+                    id: 2,
+                    type: 'email_update',
+                    title: 'User updated email address',
+                    description: 'Changed email from old@example.com to ahmed@example.com',
+                    timestamp: '2024-01-10 09:15',
+                    icon: '✉️',
+                    bgColor: 'bg-green-100',
+                    iconColor: 'text-green-600'
+                  },
+                  {
+                    id: 3,
+                    type: 'address_change',
+                    title: 'User changed address',
+                    description: 'Updated delivery address to 123 Main Street, Block F, Gulberg III, Lahore',
+                    timestamp: '2024-01-08 16:45',
+                    icon: '📍',
+                    bgColor: 'bg-yellow-100',
+                    iconColor: 'text-yellow-600'
+                  },
+                  {
+                    id: 4,
+                    type: 'kitchen_name',
+                    title: 'User changed kitchen name',
+                    description: 'Updated kitchen name from "Ahmed\'s Kitchen" to "Khan\'s Delicious Food"',
+                    timestamp: '2024-01-05 11:20',
+                    icon: '🍳',
+                    bgColor: 'bg-purple-100',
+                    iconColor: 'text-purple-600'
+                  },
+                  {
+                    id: 5,
+                    type: 'profile_update',
+                    title: 'User updated profile information',
+                    description: 'Modified phone number and city information',
+                    timestamp: '2024-01-02 13:10',
+                    icon: '👤',
+                    bgColor: 'bg-gray-100',
+                    iconColor: 'text-gray-600'
+                  }
+                ].map((activity, activityIdx, activities) => (
+                  <li key={activity.id}>
+                    <div className="relative pb-8">
+                      {activityIdx !== activities.length - 1 ? (
+                        <span
+                          className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      <div className="relative flex space-x-3">
+                        <div>
+                          <span className={`${activity.bgColor} h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white`}>
+                            <span className="text-sm">{activity.icon}</span>
+                          </span>
+                        </div>
+                        <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {activity.title}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {activity.description}
+                            </p>
+                          </div>
+                          <div className="whitespace-nowrap text-right text-sm text-gray-500">
+                            <time dateTime={activity.timestamp}>
+                              {activity.timestamp}
+                            </time>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Empty state when no activities */}
+            {/* Uncomment this section if you want to show empty state when no activities exist
+            <div className="text-center py-12">
+              <div className="text-gray-500">
+                <p className="text-lg font-medium">No Activities Found</p>
+                <p className="mt-2">This partner hasn't performed any activities yet.</p>
+              </div>
+            </div>
+            */}
+          </div>
+        )}
       </div>
 
       {/* Create Kitchen Modal */}
@@ -351,16 +545,27 @@ const PartenerDetail = () => {
             <div className="space-y-4">
               <div>
                 <label htmlFor="kitchenName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Kitchen Name
+                  Kitchen Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   id="kitchenName"
                   value={kitchenForm.name}
-                  onChange={(e) => setKitchenForm({ ...kitchenForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter kitchen name"
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setKitchenForm({ ...kitchenForm, name: newName });
+                    // Real-time validation
+                    const error = validateKitchenName(newName);
+                    setKitchenNameError(error);
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                    kitchenNameError ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter kitchen name (letters, numbers, spaces only)"
                 />
+                {kitchenNameError && (
+                  <p className="mt-1 text-sm text-red-600">{kitchenNameError}</p>
+                )}
               </div>
               
               <div>
@@ -373,8 +578,22 @@ const PartenerDetail = () => {
                   value={kitchenForm.tagline}
                   onChange={(e) => setKitchenForm({ ...kitchenForm, tagline: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter kitchen tagline"
+                  placeholder="Enter kitchen tagline (optional)"
                 />
+              </div>
+              
+              <div>
+                <label htmlFor="approvalStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                  Approval Status
+                </label>
+                <select
+                  id="approvalStatus"
+                  disabled
+                  value={kitchenForm.approvalStatus}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed"
+                >
+                  <option value="Pending for approval">Pending for approval</option>
+                </select>
               </div>
             </div>
             
@@ -386,8 +605,74 @@ const PartenerDetail = () => {
                 Cancel
               </button>
               <button
-                onClick={handleSaveKitchen}
-                disabled={!kitchenForm.name.trim() || !kitchenForm.tagline.trim()}
+                onClick={handleCreateKitchen}
+                disabled={!kitchenForm.name.trim() || kitchenNameError}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-primary-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                Create Kitchen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit ID Verification Modal */}
+      {showIdEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Edit ID Verification
+              </h3>
+              <button
+                onClick={handleCancelIdEdit}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="editDocumentNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                  ID Documentation Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="editDocumentNumber"
+                  value={idForm.documentNumber}
+                  onChange={(e) => setIdForm({ ...idForm, documentNumber: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter ID documentation number"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="editExpiryDate" className="block text-sm font-medium text-gray-700 mb-1">
+                  ID Documentation Expiry <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  id="editExpiryDate"
+                  value={idForm.expiryDate}
+                  onChange={(e) => setIdForm({ ...idForm, expiryDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={handleCancelIdEdit}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveIdChanges}
+                disabled={!idForm.documentNumber.trim() || !idForm.expiryDate}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-primary-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 Save
@@ -396,6 +681,20 @@ const PartenerDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmationModal}
+        title="Confirm Kitchen Creation"
+        message={`Are you sure you want to create this kitchen with the following details?\n\nKitchen Name: ${kitchenForm.name}${kitchenForm.tagline ? `\nTagline: ${kitchenForm.tagline}` : ''}\nStatus: ${kitchenForm.approvalStatus}`}
+        comment={confirmationComment}
+        onCommentChange={setConfirmationComment}
+        onConfirm={handleConfirmCreateKitchen}
+        onCancel={handleCancelConfirmation}
+        confirmButtonText="Create Kitchen"
+        confirmButtonColor="primary"
+        isCommentRequired={true}
+      />
     </div>
   );
 };

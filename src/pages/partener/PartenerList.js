@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MagnifyingGlassIcon, FunnelIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, FunnelIcon, EyeIcon, PencilIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, KeyIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 const PartenerList = () => {
@@ -13,10 +13,29 @@ const PartenerList = () => {
     const [confirmationComment, setConfirmationComment] = useState('');
     const [pendingAction, setPendingAction] = useState(null);
   const [filters, setFilters] = useState({
-    city: '',
-    status: ''
+    name: '',
+    mobileNumber: '',
+    email: '',
+    kitchenName: '',
+    status: '',
+    role: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [showResetPinModal, setShowResetPinModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    kitchenName: '',
+    email: '',
+    phone: '',
+    role: ''
+  });
+  const [pinForm, setPinForm] = useState({
+    newPin: '',
+    confirmPin: ''
+  });
   const handleTogglePartenerStatus = (partnerId) => {
     const partner = parteners.find(p => p.id === partnerId);
     const newStatus = !partner.status;
@@ -102,10 +121,31 @@ const PartenerList = () => {
       );
     }
 
-    // Apply city filter
-    if (filters.city) {
+    // Apply name filter
+    if (filters.name) {
       result = result.filter(partner => 
-        partner.role.toLowerCase().includes(filters.city.toLowerCase())
+        partner.name.toLowerCase().includes(filters.name.toLowerCase())
+      );
+    }
+
+    // Apply mobile number filter
+    if (filters.mobileNumber) {
+      result = result.filter(partner => 
+        partner.phone.includes(filters.mobileNumber)
+      );
+    }
+
+    // Apply email filter
+    if (filters.email) {
+      result = result.filter(partner => 
+        partner.email.toLowerCase().includes(filters.email.toLowerCase())
+      );
+    }
+
+    // Apply kitchen name filter
+    if (filters.kitchenName) {
+      result = result.filter(partner => 
+        partner.kitchenName.toLowerCase().includes(filters.kitchenName.toLowerCase())
       );
     }
 
@@ -115,8 +155,48 @@ const PartenerList = () => {
       result = result.filter(partner => partner.status === statusBoolean);
     }
 
+    // Apply role filter
+    if (filters.role) {
+      result = result.filter(partner => 
+        partner.role.toLowerCase().includes(filters.role.toLowerCase())
+      );
+    }
+
     setFilteredParteners(result);
   }, [searchTerm, filters, parteners]);
+
+  // Sorting function
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Apply sorting to filtered partners
+  const sortedParteners = React.useMemo(() => {
+    let sortableParteners = [...filteredParteners];
+    if (sortConfig.key) {
+      sortableParteners.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+        
+        // Handle empty values
+        if (!aValue) aValue = '';
+        if (!bValue) bValue = '';
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableParteners;
+  }, [filteredParteners, sortConfig]);
 
   // Get unique cities and statuses for filter dropdowns
   const cities = [...new Set(parteners.map(partener => partener.role))];
@@ -133,8 +213,76 @@ const PartenerList = () => {
 
   // Handle edit action
   const handleEdit = (partnerId) => {
-    console.log('Edit partner:', partnerId);
-    // TODO: Implement edit functionality
+    const partner = parteners.find(p => p.id === partnerId);
+    setSelectedPartner(partner);
+    setEditForm({
+      name: partner.name,
+      kitchenName: partner.kitchenName,
+      email: partner.email,
+      phone: partner.phone,
+      role: partner.role
+    });
+    setShowEditModal(true);
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = () => {
+    setConfirmationAction('edit');
+    setPendingAction({ 
+      partnerId: selectedPartner.id, 
+      partnerName: selectedPartner.name,
+      editData: editForm
+    });
+    setShowConfirmationModal(true);
+    setConfirmationComment('');
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setSelectedPartner(null);
+    setEditForm({
+      name: '',
+      kitchenName: '',
+      email: '',
+      phone: '',
+      role: ''
+    });
+  };
+
+  // Handle reset PIN
+  const handleResetPin = (partner) => {
+    setSelectedPartner(partner);
+    setPinForm({ newPin: '', confirmPin: '' });
+    setShowResetPinModal(true);
+  };
+
+  // Handle PIN form submission
+  const handlePinSubmit = () => {
+    // Validate PIN
+    if (pinForm.newPin !== pinForm.confirmPin) {
+      alert('PINs do not match');
+      return;
+    }
+    
+    if (pinForm.newPin.length !== 4) {
+      alert('PIN must be 4 digits');
+      return;
+    }
+    
+    if (!/^\d{4}$/.test(pinForm.newPin)) {
+      alert('PIN must contain only numbers');
+      return;
+    }
+
+    // Here you would typically make an API call to update the PIN
+    console.log('Resetting PIN for partner:', selectedPartner.name, 'New PIN:', pinForm.newPin);
+    alert('PIN reset successfully');
+    
+    // Close modal and reset form
+    setShowResetPinModal(false);
+    setSelectedPartner(null);
+    setPinForm({ newPin: '', confirmPin: '' });
   };
 
   // Handle confirm status change
@@ -158,6 +306,29 @@ const PartenerList = () => {
       setShowConfirmationModal(false);
       setConfirmationComment('');
       setPendingAction(null);
+    }
+  };
+
+  // Handle confirm edit
+  const handleConfirmEdit = () => {
+    if (pendingAction && confirmationComment.trim()) {
+      setParteners(prev => prev.map(partner => 
+        partner.id === pendingAction.partnerId 
+          ? { ...partner, ...pendingAction.editData }
+          : partner
+      ));
+      setShowEditModal(false);
+      setShowConfirmationModal(false);
+      setConfirmationComment('');
+      setPendingAction(null);
+      setSelectedPartner(null);
+      setEditForm({
+        name: '',
+        kitchenName: '',
+        email: '',
+        phone: '',
+        role: ''
+      });
     }
   };
 
@@ -189,6 +360,39 @@ const PartenerList = () => {
 
   return (
     <div>
+      {showConfirmationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <ConfirmationModal
+            isOpen={showConfirmationModal}
+            title={
+              confirmationAction === 'status' ? 'Confirm Status Change' : 
+              confirmationAction === 'edit' ? 'Confirm Partner Update' : 
+              'Confirm Delete'
+            }
+            message={
+              confirmationAction === 'status' 
+                ? `Are you sure you want to ${pendingAction?.newStatus ? 'activate' : 'deactivate'} "${pendingAction?.partnerName}"?`
+                : confirmationAction === 'edit'
+                ? `Are you sure you want to update the information for "${pendingAction?.partnerName}"?`
+                : `Are you sure you want to delete "${pendingAction?.partnerName}"?`
+            }
+            comment={confirmationComment}
+            onCommentChange={setConfirmationComment}
+            onConfirm={
+              confirmationAction === 'status' ? handleConfirmStatusChange : 
+              confirmationAction === 'edit' ? handleConfirmEdit :
+              handleConfirmDelete
+            }
+            onCancel={handleCancelConfirmation}
+            confirmButtonText={
+              confirmationAction === 'status' ? 'Confirm Change' : 
+              confirmationAction === 'edit' ? 'Update Partner' :
+              'Confirm Delete'
+            }
+            confirmButtonColor="primary"
+          />
+        </div>
+      )}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Partners</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -222,42 +426,66 @@ const PartenerList = () => {
             </button>
           </div>
         </div>
-        <ConfirmationModal
-          isOpen={showConfirmationModal}
-          title={confirmationAction === 'status' ? 'Confirm Status Change' : 'Confirm Delete'}
-          message={
-            confirmationAction === 'status' 
-              ? `Are you sure you want to ${pendingAction?.newStatus ? 'activate' : 'deactivate'} "${pendingAction?.partnerName}"?`
-              : `Are you sure you want to delete "${pendingAction?.partnerName}"?`
-          }
-          comment={confirmationComment}
-          onCommentChange={setConfirmationComment}
-          onConfirm={confirmationAction === 'status' ? handleConfirmStatusChange : handleConfirmDelete}
-          onCancel={handleCancelConfirmation}
-          confirmButtonText={confirmationAction === 'status' ? 'Confirm Change' : 'Confirm Delete'}
-          confirmButtonColor="primary"
-        />
+        
         {/* Filter Panel */}
         {showFilters && (
-          <div className="p-4 border-b border-gray-200 grid grid-cols-1 gap-y-4 sm:grid-cols-3 sm:gap-x-6">
+          <div className="p-4 border-b border-gray-200 grid grid-cols-1 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-6">
             <div>
-              <label htmlFor="city-filter" className="block text-sm font-medium text-gray-700">
-                City
+              <label htmlFor="name-filter" className="block text-sm font-medium text-gray-700">
+                Name
               </label>
-              <select
-                id="city-filter"
-                value={filters.city}
-                onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-              >
-                <option value="">All Cities</option>
-                {cities.map((city) => (
-                  <option key={city} value={city}>
-                    {city}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                id="name-filter"
+                value={filters.name}
+                onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                placeholder="Filter by name..."
+              />
             </div>
+            
+            <div>
+              <label htmlFor="mobile-filter" className="block text-sm font-medium text-gray-700">
+                Mobile Number
+              </label>
+              <input
+                type="text"
+                id="mobile-filter"
+                value={filters.mobileNumber}
+                onChange={(e) => setFilters({ ...filters, mobileNumber: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                placeholder="Filter by mobile number..."
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="email-filter" className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                type="text"
+                id="email-filter"
+                value={filters.email}
+                onChange={(e) => setFilters({ ...filters, email: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                placeholder="Filter by email..."
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="kitchen-filter" className="block text-sm font-medium text-gray-700">
+                Kitchen Name
+              </label>
+              <input
+                type="text"
+                id="kitchen-filter"
+                value={filters.kitchenName}
+                onChange={(e) => setFilters({ ...filters, kitchenName: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                placeholder="Filter by kitchen name..."
+              />
+            </div>
+            
             <div>
               <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700">
                 Status
@@ -269,21 +497,23 @@ const PartenerList = () => {
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
               >
                 <option value="">All Statuses</option>
-                {statuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </option>
-                ))}
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                Reset Filters
-              </button>
+            
+            <div>
+              <label htmlFor="role-filter" className="block text-sm font-medium text-gray-700">
+                Role
+              </label>
+              <input
+                type="text"
+                id="role-filter"
+                value={filters.role}
+                onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                placeholder="Filter by role..."
+              />
             </div>
           </div>
         )}
@@ -312,10 +542,38 @@ const PartenerList = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Partner Name
+                    <button
+                      onClick={() => handleSort('name')}
+                      className="flex items-center space-x-1 hover:text-gray-700 focus:outline-none"
+                    >
+                      <span>Partner Name</span>
+                      {sortConfig.key === 'name' ? (
+                        sortConfig.direction === 'asc' ? (
+                          <ChevronUpIcon className="h-4 w-4" />
+                        ) : (
+                          <ChevronDownIcon className="h-4 w-4" />
+                        )
+                      ) : (
+                        <div className="h-4 w-4" />
+                      )}
+                    </button>
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Kitchen Name
+                    <button
+                      onClick={() => handleSort('kitchenName')}
+                      className="flex items-center space-x-1 hover:text-gray-700 focus:outline-none"
+                    >
+                      <span>Kitchen Name</span>
+                      {sortConfig.key === 'kitchenName' ? (
+                        sortConfig.direction === 'asc' ? (
+                          <ChevronUpIcon className="h-4 w-4" />
+                        ) : (
+                          <ChevronDownIcon className="h-4 w-4" />
+                        )
+                      ) : (
+                        <div className="h-4 w-4" />
+                      )}
+                    </button>
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
@@ -332,7 +590,7 @@ const PartenerList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredParteners.map((partner) => (
+                {sortedParteners.map((partner) => (
                   <tr key={partner.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{partner.name}</div>
@@ -376,6 +634,13 @@ const PartenerList = () => {
                           <PencilIcon className="h-5 w-5" />
                         </button>
                         <button
+                          onClick={() => handleResetPin(partner)}
+                          className="text-yellow-600 hover:text-yellow-900 transition-colors"
+                          title="Reset PIN"
+                        >
+                          <KeyIcon className="h-5 w-5" />
+                        </button>
+                        <button
                           onClick={() => handleRemovePartener(partner.id)}
                           className="text-red-600 hover:text-red-900 transition-colors"
                           title="Delete partner"
@@ -391,6 +656,189 @@ const PartenerList = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Partner Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">Edit Partner</h3>
+              <button 
+                onClick={handleCancelEdit} 
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="editName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Partner Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="editName"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter partner name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="editKitchenName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Kitchen Name
+                </label>
+                <input
+                  type="text"
+                  id="editKitchenName"
+                  value={editForm.kitchenName}
+                  onChange={(e) => setEditForm({ ...editForm, kitchenName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter kitchen name (optional)"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="editEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="editEmail"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="editPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="editPhone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter phone number"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="editRole" className="block text-sm font-medium text-gray-700 mb-1">
+                  Role <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="editRole"
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  required
+                >
+                  <option value="">Select role</option>
+                  <option value="owner">Owner</option>
+                  <option value="manager">Manager</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                disabled={!editForm.name.trim() || !editForm.email.trim() || !editForm.phone.trim() || !editForm.role}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                Update Partner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset PIN Modal */}
+      {showResetPinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">Reset PIN</h3>
+              <button 
+                onClick={() => setShowResetPinModal(false)} 
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                Resetting PIN for: <span className="font-medium">{selectedPartner?.name}</span>
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="newPin" className="block text-sm font-medium text-gray-700 mb-1">
+                  New PIN
+                </label>
+                <input
+                  type="password"
+                  id="newPin"
+                  value={pinForm.newPin}
+                  onChange={(e) => setPinForm({ ...pinForm, newPin: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter 4-digit PIN"
+                  maxLength={4}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPin" className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm PIN
+                </label>
+                <input
+                  type="password"
+                  id="confirmPin"
+                  value={pinForm.confirmPin}
+                  onChange={(e) => setPinForm({ ...pinForm, confirmPin: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Confirm 4-digit PIN"
+                  maxLength={4}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowResetPinModal(false)}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePinSubmit}
+                disabled={!pinForm.newPin || !pinForm.confirmPin}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-full hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                Reset PIN
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

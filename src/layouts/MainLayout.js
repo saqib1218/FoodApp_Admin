@@ -55,18 +55,18 @@ const MainLayout = () => {
   // Define navigation items with required permissions
   const navigation = [
     { name: 'Dashboard', href: '/', icon: HomeIcon, permission: null }, // Always visible
+    { name: 'Partners', href: '/parteners', icon: BuildingOfficeIcon, permission: null },
     { name: 'Kitchens', href: '/kitchens', icon: BuildingStorefrontIcon, permission: 'view_kitchens' },
-    { name: 'Onboarding Queue', href: '/onboarding', icon: QueueListIcon, permission: 'view_kitchens' },
+    // { name: 'Onboarding Queue', href: '/onboarding', icon: QueueListIcon, permission: 'view_kitchens' },
     { name: 'Orders', href: '/orders', icon: ShoppingBagIcon, permission: 'view_orders' },
-    { name: 'Discounts', href: '/discounts', icon: TagIcon, permission: 'view_orders' },
+    { name: 'Customers', href: '/customers', icon: UsersIcon, permission: null }, // Always visible for now
     { name: 'Engagement', href: '/engagement', icon: ChatBubbleLeftRightIcon, permission: 'send_broadcast' },
     { name: 'Feedback', href: '/feedback', icon: ChatBubbleBottomCenterTextIcon, permission: null }, // Always visible for now
-    { name: 'Customers', href: '/customers', icon: UsersIcon, permission: null }, // Always visible for now
-    { name: 'Partners', href: '/parteners', icon: BuildingOfficeIcon, permission: null },
+    { name: 'Permissions Demo', href: '/permissions-demo', icon: ShieldCheckIcon, permission: null }, // Demo page for RBAC
+    { name: 'Discounts', href: '/discounts', icon: TagIcon, permission: 'view_orders' },
     { name: 'Users', href: '/users', icon: UserGroupIcon, permission: null }, // Always visible for now  // Always visible for now 
     { name: 'Reports', href: '/reports', icon: ChartBarIcon, permission: null }, // Always visible for now
     { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, permission: null }, // Always visible for now
-    { name: 'Permissions Demo', href: '/permissions-demo', icon: ShieldCheckIcon, permission: null }, // Demo page for RBAC
   ];
 
   // Filter navigation items based on permissions
