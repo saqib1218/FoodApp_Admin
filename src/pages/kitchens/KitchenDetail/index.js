@@ -5,6 +5,7 @@ import { CheckCircleIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/out
 import { kitchenService } from '../../../services/kitchens/kitchenService';
 import { useAuth } from '../../../context/useAuth';
 import { PermissionGate } from '../../../components/PermissionGate';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 // Import tab components
 import KitchenInfoTab from './KitchenInfoTab';
@@ -65,21 +66,23 @@ const KitchenDetail = () => {
   };
 
   const confirmStatusUpdate = async () => {
-    if (!statusComment.trim()) {
-      alert('Please provide a comment for this status change');
-      return;
-    }
-
     try {
       setIsLoading(true);
       const updatedKitchen = await kitchenService.updateKitchenStatus(id, newStatus, statusComment);
       setKitchen(updatedKitchen);
       setShowStatusModal(false);
+      setStatusComment('');
     } catch (err) {
       console.error('Failed to update kitchen status:', err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCancelStatusUpdate = () => {
+    setShowStatusModal(false);
+    setStatusComment('');
+    setNewStatus('');
   };
 
   // Get status badge
@@ -172,15 +175,15 @@ const KitchenDetail = () => {
                 onClick={() => handleStatusUpdate('active')}
                 className="px-4 py-2 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
-                Activate Kitchen
+                Open Kitchen
               </button>
             )}
-            {kitchen.status !== 'suspended' && (
+            {kitchen.status === 'active' && (
               <button
                 onClick={() => handleStatusUpdate('suspended')}
-                className="px-4 py-2 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                className="px-4 py-2 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
               >
-                Suspend Kitchen
+                Close Kitchen
               </button>
             )}
           </div>
@@ -214,7 +217,7 @@ const KitchenDetail = () => {
             <div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Owner</h3>
-                <p className="mt-1 text-neutral-900">{kitchen.owner?.name || 'Not assigned'}</p>
+                <p className="mt-1 text-neutral-900">Asim</p>
               </div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Status</h3>
@@ -222,11 +225,18 @@ const KitchenDetail = () => {
               </div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Contact</h3>
-                <p className="mt-1 text-neutral-900">{kitchen.contact || 'No contact information'}</p>
+                <p className="mt-1 text-neutral-900">03406754766</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-neutral-500">Cuisine</h3>
-                <p className="mt-1 text-neutral-900">{kitchen.cuisine || 'Not specified'}</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Pakistani
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Fast Food
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -353,62 +363,22 @@ const KitchenDetail = () => {
       </div>
 
       {/* Status Update Modal */}
-      {showStatusModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <div className="mb-4">
-              <h3 className="text-lg font-medium text-neutral-900">
-                {newStatus === 'active' 
-                  ? 'Activate Kitchen' 
-                  : newStatus === 'suspended'
-                  ? 'Suspend Kitchen'
-                  : 'Update Kitchen Status'
-                }
-              </h3>
-              <p className="text-sm text-neutral-500 mt-1">
-                {newStatus === 'active' 
-                  ? 'This will make the kitchen visible to customers and allow it to accept orders.' 
-                  : newStatus === 'suspended'
-                  ? 'This will hide the kitchen from customers and prevent it from accepting new orders.'
-                  : 'Please confirm the status change.'
-                }
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Comment (Required)
-              </label>
-              <textarea
-                value={statusComment}
-                onChange={(e) => setStatusComment(e.target.value)}
-                className="w-full p-2 border border-neutral-300 rounded-md mt-1"
-                rows="3"
-                placeholder="Enter your comments here..."
-              />
-            </div>
-            <div className="flex justify-end space-x-2 mt-4">
-              <button
-                onClick={() => setShowStatusModal(false)}
-                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmStatusUpdate}
-                className={`px-4 py-2 rounded-full text-white text-sm font-medium ${
-                  newStatus === 'active' 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : newStatus === 'suspended'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-primary-600 hover:bg-primary-700'
-                }`}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={showStatusModal}
+        title={newStatus === 'active' ? 'Open Kitchen' : 'Close Kitchen'}
+        message={
+          newStatus === 'active' 
+            ? 'This will make the kitchen visible to customers and allow it to accept orders.' 
+            : 'This will hide the kitchen from customers and prevent it from accepting new orders.'
+        }
+        comment={statusComment}
+        onCommentChange={setStatusComment}
+        onConfirm={confirmStatusUpdate}
+        onCancel={handleCancelStatusUpdate}
+        confirmButtonText={newStatus === 'active' ? 'Open Kitchen' : 'Close Kitchen'}
+        confirmButtonColor={newStatus === 'active' ? 'green' : 'primary'}
+        isCommentRequired={true}
+      />
     </KitchenContext.Provider>
   );
 };

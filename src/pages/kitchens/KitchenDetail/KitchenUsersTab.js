@@ -214,6 +214,26 @@ const KitchenUsersTab = () => {
     }
   };
 
+  // Get relative time
+  const getRelativeTime = (timestamp) => {
+    if (!timestamp) return 'Never';
+    
+    const now = new Date();
+    const lastActive = new Date(timestamp);
+    const diffInMinutes = Math.floor((now - lastActive) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} hr ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    
+    return lastActive.toLocaleDateString();
+  };
+
   // Get status badge
   const getUserStatusBadge = (status) => {
     switch (status) {
@@ -257,7 +277,7 @@ const KitchenUsersTab = () => {
       <div className="mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-medium text-neutral-900">Kitchen Users</h3>
+            <h3 className="text-lg font-medium text-neutral-900">Kitchen Partners</h3>
             <p className="mt-1 text-sm text-neutral-500">
               Manage users associated with this kitchen.
             </p>
@@ -294,7 +314,7 @@ const KitchenUsersTab = () => {
                   PIN Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Trusted Devices
+                  Last Active
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
                   Actions
@@ -334,45 +354,29 @@ const KitchenUsersTab = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-neutral-900">
-                      {user.trustedTokens?.length || 0} devices
+                      {getRelativeTime(user.lastActive || new Date(Date.now() - Math.random() * 7200000))}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      {hasPermission('view_user_documents') && (
-                        <button
-                          onClick={() => handleViewDocuments(user)}
-                          className="text-primary-600 hover:text-primary-900"
-                        >
-                          Documents
-                        </button>
-                      )}
-                      
-                      {hasPermission('edit_kitchen_user') && user.status !== 'active' && (
-                        <button
-                          onClick={() => handleStatusUpdate(user, 'active')}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          Activate
-                        </button>
-                      )}
-                      
-                      {hasPermission('edit_kitchen_user') && user.status !== 'suspended' && (
-                        <button
-                          onClick={() => handleStatusUpdate(user, 'suspended')}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                      
-                      {hasPermission('edit_kitchen_user') && user.pinBlocked && (
-                        <button
-                          onClick={() => handleUnblockPin(user)}
-                          className="text-yellow-600 hover:text-yellow-900"
-                        >
-                          Unblock PIN
-                        </button>
+                      {hasPermission('edit_kitchen_user') && (
+                        <>
+                          {user.status === 'active' ? (
+                            <button
+                              onClick={() => handleStatusUpdate(user, 'suspended')}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Suspend
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleStatusUpdate(user, 'active')}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              Activate
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>

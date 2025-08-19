@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { kitchenAddressService } from '../../../services/kitchens/kitchenAddressService';
 import { useAuth } from '../../../context/useAuth';
 import { PermissionButton } from '../../../components/PermissionButton';
 import { KitchenContext } from './index';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const KitchenAddressesTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
@@ -12,16 +13,21 @@ const KitchenAddressesTab = () => {
   // State variables
   const [kitchenAddresses, setKitchenAddresses] = useState([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-  const [showEditAddressModal, setShowEditAddressModal] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [addressForm, setAddressForm] = useState({
     fullAddress: '',
+    city: '',
     cityZone: '',
-    googleMapLink: '',
     nearestLocation: '',
-    deliveryInstructions: ''
+    locationLink: '',
+    longitude: '',
+    latitude: '',
+    status: 'active'
   });
-  const [addressComment, setAddressComment] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmComment, setConfirmComment] = useState('');
+  const [modalAction, setModalAction] = useState(''); // 'add' or 'edit'
 
   // Fetch kitchen addresses
   useEffect(() => {
@@ -44,48 +50,131 @@ const KitchenAddressesTab = () => {
     fetchKitchenAddresses();
   }, [kitchenId, hasPermission]);
 
+  // Handle add address
+  const handleAddAddress = () => {
+    setSelectedAddress(null);
+    setAddressForm({
+      fullAddress: '',
+      city: '',
+      cityZone: '',
+      nearestLocation: '',
+      locationLink: '',
+      longitude: '',
+      latitude: '',
+      status: 'active'
+    });
+    setShowAddressModal(true);
+  };
+
   // Handle edit address
   const handleEditAddress = (address) => {
     setSelectedAddress(address);
     setAddressForm({
-      fullAddress: address.fullAddress,
-      cityZone: address.cityZone,
-      googleMapLink: address.googleMapLink,
-      nearestLocation: address.nearestLocation,
-      deliveryInstructions: address.deliveryInstructions || ''
+      fullAddress: address.fullAddress || '',
+      city: address.city || '',
+      cityZone: address.cityZone || '',
+      nearestLocation: address.nearestLocation || '',
+      locationLink: address.locationLink || '',
+      longitude: address.longitude || '',
+      latitude: address.latitude || '',
+      status: address.status || 'active'
     });
-    setAddressComment('');
-    setShowEditAddressModal(true);
+    setShowAddressModal(true);
   };
 
-  // Handle update address
-  const handleUpdateAddress = async (e) => {
-    e.preventDefault();
-    
-    if (!selectedAddress) return;
+  // Handle get location
+  const handleGetLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setAddressForm({
+            ...addressForm,
+            longitude: position.coords.longitude.toString(),
+            latitude: position.coords.latitude.toString()
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          alert('Unable to get location. Please check your browser permissions.');
+        }
+      );
+    } else {
+      alert('Geolocation is not supported by this browser.');
+    }
+  };
 
+  // Handle submit (add or edit)
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setModalAction(selectedAddress ? 'edit' : 'add');
+    setShowAddressModal(false);
+    setConfirmComment('');
+    setShowConfirmModal(true);
+  };
+
+  // Confirm address action
+  const confirmAddressAction = async () => {
     try {
       setIsLoadingAddresses(true);
       
-      const updatedAddress = {
-        ...selectedAddress,
-        ...addressForm,
-        kitchenId: String(kitchenId)
-      };
+      if (modalAction === 'add') {
+        // Add new address
+        const newAddress = {
+          id: Date.now(), // Temporary ID
+          ...addressForm,
+          kitchenId: String(kitchenId)
+        };
+        setKitchenAddresses([...kitchenAddresses, newAddress]);
+      } else {
+        // Update existing address
+        const updatedAddress = {
+          ...selectedAddress,
+          ...addressForm,
+          kitchenId: String(kitchenId)
+        };
+        const updatedAddresses = kitchenAddresses.map(addr => 
+          addr.id === selectedAddress.id ? updatedAddress : addr
+        );
+        setKitchenAddresses(updatedAddresses);
+      }
       
-      await kitchenAddressService.updateAddress(updatedAddress, addressComment);
-      
-      // Refresh addresses list
-      const addresses = await kitchenAddressService.getKitchenAddresses(kitchenId);
-      setKitchenAddresses(addresses);
-      
-      // Close modal
-      setShowEditAddressModal(false);
-      setAddressComment('');
+      setShowConfirmModal(false);
+      setConfirmComment('');
     } catch (err) {
-      console.error('Failed to update address:', err);
+      console.error('Failed to save address:', err);
     } finally {
       setIsLoadingAddresses(false);
+    }
+  };
+
+  // Handle cancel confirmation
+  const handleCancelConfirmation = () => {
+    setShowConfirmModal(false);
+    setConfirmComment('');
+    setShowAddressModal(true);
+  };
+
+  // Get status badge
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'active':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+          </span>
+        );
+      case 'inactive':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            Inactive
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -99,11 +188,21 @@ const KitchenAddressesTab = () => {
 
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="text-lg font-medium text-neutral-900">Kitchen Addresses</h3>
-        <p className="mt-1 text-sm text-neutral-500">
-          Manage the addresses associated with this kitchen.
-        </p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-medium text-neutral-900">Kitchen Addresses</h3>
+          <p className="mt-1 text-sm text-neutral-500">
+            Manage the addresses associated with this kitchen.
+          </p>
+        </div>
+        <PermissionButton
+          permission="edit_kitchen_addresses"
+          onClick={handleAddAddress}
+          className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium flex items-center"
+        >
+          <PlusIcon className="h-4 w-4 mr-1" />
+          Add Address
+        </PermissionButton>
       </div>
 
       {kitchenAddresses.length === 0 ? (
@@ -119,10 +218,16 @@ const KitchenAddressesTab = () => {
                   Address
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                  City
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                   City Zone
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                   Nearest Location
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                  Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
                   Actions
@@ -136,10 +241,16 @@ const KitchenAddressesTab = () => {
                     <div className="text-sm text-neutral-900">{address.fullAddress}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-neutral-900">{address.city}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-neutral-900">{address.cityZone}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-neutral-900">{address.nearestLocation}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(address.status || 'active')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <PermissionButton
@@ -158,23 +269,25 @@ const KitchenAddressesTab = () => {
         </div>
       )}
 
-      {/* Edit Address Modal */}
-      {showEditAddressModal && (
+      {/* Address Modal */}
+      {showAddressModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-8">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-neutral-900">Edit Kitchen Address</h3>
+              <h3 className="text-lg font-medium text-neutral-900">
+                {selectedAddress ? 'Edit Kitchen Address' : 'Add Kitchen Address'}
+              </h3>
               <button
-                onClick={() => setShowEditAddressModal(false)}
+                onClick={() => setShowAddressModal(false)}
                 className="text-neutral-500 hover:text-neutral-700"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleUpdateAddress} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="fullAddress" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Full Address
+                  Address
                 </label>
                 <textarea
                   id="fullAddress"
@@ -188,38 +301,36 @@ const KitchenAddressesTab = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="cityZone" className="block text-sm font-medium text-neutral-700 mb-1">
-                    City Zone
-                  </label>
-                  <input
-                    type="text"
-                    id="cityZone"
-                    name="cityZone"
-                    value={addressForm.cityZone}
-                    onChange={(e) => setAddressForm({...addressForm, cityZone: e.target.value})}
-                    className="w-full p-3 border border-neutral-300 rounded-xl focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter city zone"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="googleMapLink" className="block text-sm font-medium text-neutral-700 mb-1">
-                    Google Map Link
-                  </label>
-                  <input
-                    type="text"
-                    id="googleMapLink"
-                    name="googleMapLink"
-                    value={addressForm.googleMapLink}
-                    onChange={(e) => setAddressForm({...addressForm, googleMapLink: e.target.value})}
-                    className="w-full p-3 border border-neutral-300 rounded-xl focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter Google Maps link"
-                    required
-                  />
-                </div>
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-neutral-700 mb-1">
+                  City
+                </label>
+                <input
+                  type="text"
+                  id="city"
+                  name="city"
+                  value={addressForm.city}
+                  onChange={(e) => setAddressForm({...addressForm, city: e.target.value})}
+                  className="w-full p-3 border border-neutral-300 rounded-xl focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter city name"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="cityZone" className="block text-sm font-medium text-neutral-700 mb-1">
+                  City Zone
+                </label>
+                <input
+                  type="text"
+                  id="cityZone"
+                  name="cityZone"
+                  value={addressForm.cityZone}
+                  onChange={(e) => setAddressForm({...addressForm, cityZone: e.target.value})}
+                  className="w-full p-3 border border-neutral-300 rounded-xl focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter city zone"
+                  required
+                />
               </div>
               
               <div>
@@ -239,38 +350,82 @@ const KitchenAddressesTab = () => {
               </div>
               
               <div>
-                <label htmlFor="deliveryInstructions" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Delivery Instructions
+                <label htmlFor="locationLink" className="block text-sm font-medium text-neutral-700 mb-1">
+                  Location Link
                 </label>
-                <textarea
-                  id="deliveryInstructions"
-                  name="deliveryInstructions"
-                  rows="3"
-                  value={addressForm.deliveryInstructions}
-                  onChange={(e) => setAddressForm({...addressForm, deliveryInstructions: e.target.value})}
+                <input
+                  type="url"
+                  id="locationLink"
+                  name="locationLink"
+                  value={addressForm.locationLink}
+                  onChange={(e) => setAddressForm({...addressForm, locationLink: e.target.value})}
                   className="w-full p-3 border border-neutral-300 rounded-xl focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter delivery instructions"
+                  placeholder="Enter location link (Google Maps, etc.)"
                 />
               </div>
               
-              <div>
-                <label htmlFor="comment" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Comment
-                </label>
-                <textarea
-                  id="comment"
-                  name="comment"
-                  rows="3"
-                  value={addressComment}
-                  onChange={(e) => setAddressComment(e.target.value)}
-                  className="w-full p-3 border border-neutral-300 rounded-xl focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Add a comment about this change..."
-                />
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-center mb-4">
                 <button
                   type="button"
-                  onClick={() => setShowEditAddressModal(false)}
+                  onClick={handleGetLocation}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
+                >
+                  Get Location
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="longitude" className="block text-sm font-medium text-neutral-700 mb-1">
+                    Longitude
+                  </label>
+                  <input
+                    type="text"
+                    id="longitude"
+                    name="longitude"
+                    value={addressForm.longitude}
+                    className="w-full p-3 border border-neutral-300 rounded-xl bg-neutral-50 cursor-not-allowed"
+                    placeholder="Longitude will be filled automatically"
+                    disabled
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="latitude" className="block text-sm font-medium text-neutral-700 mb-1">
+                    Latitude
+                  </label>
+                  <input
+                    type="text"
+                    id="latitude"
+                    name="latitude"
+                    value={addressForm.latitude}
+                    className="w-full p-3 border border-neutral-300 rounded-xl bg-neutral-50 cursor-not-allowed"
+                    placeholder="Latitude will be filled automatically"
+                    disabled
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="status" className="block text-sm font-medium text-neutral-700 mb-1">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={addressForm.status}
+                  onChange={(e) => setAddressForm({...addressForm, status: e.target.value})}
+                  className="w-full p-3 border border-neutral-300 rounded-xl focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddressModal(false)}
                   className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
                 >
                   Cancel
@@ -279,13 +434,30 @@ const KitchenAddressesTab = () => {
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
                 >
-                  Save Changes
+                  {selectedAddress ? 'Update' : 'Save'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        title={modalAction === 'add' ? 'Add Address' : 'Update Address'}
+        message={modalAction === 'add' 
+          ? 'Are you sure you want to add this address to the kitchen?' 
+          : 'Are you sure you want to update this kitchen address?'
+        }
+        comment={confirmComment}
+        onCommentChange={setConfirmComment}
+        onConfirm={confirmAddressAction}
+        onCancel={handleCancelConfirmation}
+        confirmButtonText={modalAction === 'add' ? 'Add Address' : 'Update Address'}
+        confirmButtonColor="primary"
+        isCommentRequired={true}
+      />
     </div>
   );
 };

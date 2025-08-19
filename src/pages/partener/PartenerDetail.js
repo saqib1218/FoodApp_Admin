@@ -13,6 +13,11 @@ const PartenerDetail = () => {
   const [showKitchenModal, setShowKitchenModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [confirmationComment, setConfirmationComment] = useState('');
+  
+  // Rejection modal state
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectComment, setRejectComment] = useState('');
   const [kitchenForm, setKitchenForm] = useState({
     name: '',
     tagline: '',
@@ -20,6 +25,17 @@ const PartenerDetail = () => {
   });
   const [kitchenNameError, setKitchenNameError] = useState('');
   const [kitchenInfo, setKitchenInfo] = useState(null);
+
+  // Rejection reasons options
+  const rejectionReasons = [
+    'Incomplete Documentation',
+    'Invalid CNIC Information',
+    'Poor Image Quality',
+    'Document Expired',
+    'Information Mismatch',
+    'Suspicious Activity',
+    'Other'
+  ];
 
   // ID Verification edit modal state
   const [showIdEditModal, setShowIdEditModal] = useState(false);
@@ -135,6 +151,27 @@ const PartenerDetail = () => {
     // In a real app, this would call an API to update the partner status
     setPartener({...partener, status: 'active'});
     alert('Partner approved successfully!');
+  };
+
+  // Handle reject partner
+  const handleRejectPartner = () => {
+    setShowRejectModal(true);
+  };
+
+  const handleConfirmReject = () => {
+    // In a real app, this would call an API to reject the partner
+    console.log('Rejecting partner with reason:', rejectReason, 'and comment:', rejectComment);
+    setPartener({...partener, status: 'rejected'});
+    setShowRejectModal(false);
+    setRejectReason('');
+    setRejectComment('');
+    alert('Partner rejected successfully!');
+  };
+
+  const handleCancelReject = () => {
+    setShowRejectModal(false);
+    setRejectReason('');
+    setRejectComment('');
   };
 
   if (isLoading) {
@@ -402,6 +439,7 @@ const PartenerDetail = () => {
 
       <div className="flex justify-end space-x-3">
         <button
+          onClick={handleRejectPartner}
           className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
         >
           Reject
@@ -695,6 +733,80 @@ const PartenerDetail = () => {
         confirmButtonColor="primary"
         isCommentRequired={true}
       />
+
+      {/* Rejection Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Reject Partner KYC
+              </h3>
+              <button
+                onClick={handleCancelReject}
+                className="text-neutral-500 hover:text-neutral-700"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-neutral-700 mb-4">
+                Are you sure you want to reject this partner's KYC verification?
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  required
+                >
+                  <option value="">Select a reason</option>
+                  {rejectionReasons.map((reason) => (
+                    <option key={reason} value={reason}>
+                      {reason}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Additional Comments <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rejectComment}
+                  onChange={(e) => setRejectComment(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Please provide additional details about the rejection..."
+                  rows={3}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelReject}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReject}
+                disabled={!rejectReason.trim() || !rejectComment.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reject Partner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/useAuth';
 import { kitchenMediaService } from '../../../services/kitchens/kitchenMediaService';
 import { KitchenContext } from './index';
 import PermissionButton from '../../../components/PermissionButton';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const KitchenMediaTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
@@ -16,9 +17,12 @@ const KitchenMediaTab = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [newMediaFile, setNewMediaFile] = useState(null);
-  const [newMediaType, setNewMediaType] = useState('gallery');
+  const [newMediaType, setNewMediaType] = useState('image');
+  const [newMediaUsedAs, setNewMediaUsedAs] = useState('banner');
   const [newMediaCaption, setNewMediaCaption] = useState('');
   const [newMediaPreview, setNewMediaPreview] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmComment, setConfirmComment] = useState('');
 
   // Fetch kitchen media
   useEffect(() => {
@@ -60,31 +64,60 @@ const KitchenMediaTab = () => {
   const handleAddMedia = () => {
     setNewMediaFile(null);
     setNewMediaPreview('');
-    setNewMediaType('gallery');
+    setNewMediaType('image');
+    setNewMediaUsedAs('banner');
     setNewMediaCaption('');
     setShowAddMediaModal(true);
   };
 
-  // Confirm add media
-  const confirmAddMedia = async () => {
+  // Handle media type change
+  const handleMediaTypeChange = (type) => {
+    setNewMediaType(type);
+    if (type === 'video' || type === 'audio') {
+      setNewMediaUsedAs('standard');
+    } else {
+      setNewMediaUsedAs('banner');
+    }
+  };
+
+  // Handle submit add media
+  const handleSubmitAddMedia = () => {
     if (!newMediaFile) {
       alert('Please select a media file');
       return;
     }
+    setShowAddMediaModal(false);
+    setConfirmComment('');
+    setShowConfirmModal(true);
+  };
 
+  // Confirm add media
+  const confirmAddMedia = async () => {
     try {
       setIsLoadingMedia(true);
-      await kitchenMediaService.addKitchenMedia(kitchenId, {
-        file: newMediaFile,
+      
+      // Create new media object
+      const newMedia = {
+        id: Date.now(), // Temporary ID
+        url: newMediaPreview,
         type: newMediaType,
-        caption: newMediaCaption
-      });
+        mediaUsedAs: newMediaUsedAs,
+        caption: newMediaCaption,
+        status: 'pending for approval',
+        uploadDate: new Date().toISOString()
+      };
       
-      // Refresh media
-      const media = await kitchenMediaService.getKitchenMedia(kitchenId);
-      setKitchenMedia(media);
+      // Add to kitchen media list
+      setKitchenMedia([...kitchenMedia, newMedia]);
       
-      setShowAddMediaModal(false);
+      setShowConfirmModal(false);
+      // Reset form
+      setNewMediaFile(null);
+      setNewMediaPreview('');
+      setNewMediaType('image');
+      setNewMediaUsedAs('banner');
+      setNewMediaCaption('');
+      setConfirmComment('');
     } catch (err) {
       console.error('Failed to add kitchen media:', err);
     } finally {
@@ -92,19 +125,74 @@ const KitchenMediaTab = () => {
     }
   };
 
+  // Handle cancel confirmation
+  const handleCancelConfirmation = () => {
+    setShowConfirmModal(false);
+    setConfirmComment('');
+    setShowAddMediaModal(true);
+  };
+
+  // Get media status badge
+  const getMediaStatusBadge = (status) => {
+    switch (status) {
+      case 'active':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+          </span>
+        );
+      case 'processed':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Processed
+          </span>
+        );
+      case 'pending for approval':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            Pending for Approval
+          </span>
+        );
+      case 'invalid':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            Invalid
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800">
+            {status}
+          </span>
+        );
+    }
+  };
+
+  // Get media used display
+  const getMediaUsedDisplay = (mediaUsed) => {
+    switch (mediaUsed) {
+      case 'banner':
+        return 'Banner';
+      case 'logo':
+        return 'Logo';
+      case 'standard':
+        return 'Standard';
+      default:
+        return mediaUsed || 'Not specified';
+    }
+  };
+
   // Get media type display
   const getMediaTypeDisplay = (type) => {
     switch (type) {
-      case 'logo':
-        return 'Logo';
-      case 'cover':
-        return 'Cover Photo';
-      case 'menu':
-        return 'Menu';
-      case 'gallery':
-        return 'Gallery';
+      case 'image':
+        return 'Image';
+      case 'video':
+        return 'Video';
+      case 'audio':
+        return 'Audio';
       default:
-        return type;
+        return type || 'Image';
     }
   };
 
@@ -162,16 +250,16 @@ const KitchenMediaTab = () => {
                     Preview
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     Type
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                    Media Used As
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     Caption
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Uploaded
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Size
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     Actions
@@ -192,26 +280,28 @@ const KitchenMediaTab = () => {
                           className="h-full w-full object-cover rounded"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = 'https://via.placeholder.com/160x120?text=Image+Not+Available';
+                            e.target.src = 'https://via.placeholder.com/160x120?text=Media+Not+Available';
                           }}
                         />
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      {getMediaStatusBadge(media.status || 'active')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {getMediaTypeDisplay(media.type || 'image')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800">
-                        {getMediaTypeDisplay(media.type)}
+                        {getMediaUsedDisplay(media.mediaUsedAs || 'banner')}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-neutral-900 max-w-xs truncate">
                         {media.caption || '-'}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
-                      {formatDate(media.uploadDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
-                      {media.size ? `${Math.round(media.size / 1024)} KB` : 'Unknown'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -257,12 +347,33 @@ const KitchenMediaTab = () => {
               </label>
               <select
                 value={newMediaType}
-                onChange={(e) => setNewMediaType(e.target.value)}
+                onChange={(e) => handleMediaTypeChange(e.target.value)}
                 className="w-full p-2 border border-neutral-300 rounded-lg"
               >
-                <option value="gallery">Gallery Image</option>
-                <option value="menu">Menu Image</option>
-                <option value="cover">Cover Photo</option>
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+                <option value="audio">Audio</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Media Used As
+              </label>
+              <select
+                value={newMediaUsedAs}
+                onChange={(e) => setNewMediaUsedAs(e.target.value)}
+                className="w-full p-2 border border-neutral-300 rounded-lg"
+                disabled={newMediaType === 'video' || newMediaType === 'audio'}
+              >
+                {newMediaType === 'image' ? (
+                  <>
+                    <option value="banner">Banner</option>
+                    <option value="logo">Logo</option>
+                    <option value="standard">Standard</option>
+                  </>
+                ) : (
+                  <option value="standard">Standard</option>
+                )}
               </select>
             </div>
             <div className="mb-4">
@@ -271,7 +382,7 @@ const KitchenMediaTab = () => {
               </label>
               <input
                 type="file"
-                accept="image/*"
+                accept={newMediaType === 'image' ? 'image/*' : newMediaType === 'video' ? 'video/*' : 'audio/*'}
                 onChange={handleMediaFileChange}
                 className="w-full p-2 border border-neutral-300 rounded-lg"
               />
@@ -308,7 +419,7 @@ const KitchenMediaTab = () => {
                 Cancel
               </button>
               <button
-                onClick={confirmAddMedia}
+                onClick={handleSubmitAddMedia}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
               >
                 Add Media
@@ -321,28 +432,31 @@ const KitchenMediaTab = () => {
       {/* Image Preview Modal */}
       {showImagePreviewModal && selectedImage && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="max-w-4xl w-full">
+          <div className="w-[20vw] max-h-[90vh] flex flex-col">
             <div className="flex justify-end mb-2">
               <button
                 onClick={() => setShowImagePreviewModal(false)}
-                className="text-white hover:text-neutral-300"
+                className="text-white hover:text-neutral-300 bg-black bg-opacity-50 rounded-full p-2"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <div className="bg-white rounded-xl overflow-hidden">
-              <img
-                src={selectedImage.url}
-                alt={selectedImage.type}
-                className="w-full h-auto"
-              />
-              <div className="p-4">
+            <div className="bg-white rounded-xl overflow-hidden flex-1 flex flex-col">
+              <div className="flex-1 flex items-center justify-center bg-neutral-50 p-4" style={{ minHeight: '60vh', maxHeight: '70vh' }}>
+                <img
+                  src={selectedImage.url}
+                  alt={selectedImage.type}
+                  className="max-w-full max-h-full object-contain"
+                  
+                />
+              </div>
+              <div className="p-4 bg-white">
                 <div className="flex justify-between items-center">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800">
-                    {getMediaTypeDisplay(selectedImage.type)}
+                    {getMediaUsedDisplay(selectedImage.mediaUsedAs || 'banner')}
                   </span>
                   <span className="text-sm text-neutral-500">
-                    Uploaded on {formatDate(selectedImage.uploadDate)}
+                    Status: {selectedImage.status || 'Active'}
                   </span>
                 </div>
                 {selectedImage.caption && (
@@ -353,6 +467,20 @@ const KitchenMediaTab = () => {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        title="Add Media"
+        message={`Are you sure you want to add this ${newMediaType} file to the kitchen media?`}
+        comment={confirmComment}
+        onCommentChange={setConfirmComment}
+        onConfirm={confirmAddMedia}
+        onCancel={handleCancelConfirmation}
+        confirmButtonText="Add Media"
+        confirmButtonColor="primary"
+        isCommentRequired={true}
+      />
     </div>
   );
 };
