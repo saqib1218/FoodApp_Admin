@@ -10,7 +10,8 @@ import {
   PencilIcon,
   PhotoIcon,
   PlayIcon,
-  TrashIcon
+  TrashIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
@@ -22,16 +23,32 @@ const FeedbackDetail = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showUpdateConfirmModal, setShowUpdateConfirmModal] = useState(false);
   const [showRejectConfirmModal, setShowRejectConfirmModal] = useState(false);
+  const [showSendToKitchenModal, setShowSendToKitchenModal] = useState(false);
+  const [showOrderSummaryModal, setShowOrderSummaryModal] = useState(false);
   const [editComment, setEditComment] = useState('');
   const [rejectComment, setRejectComment] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
   const [updateComment, setUpdateComment] = useState('');
+  const [sendToKitchenComment, setSendToKitchenComment] = useState('');
   const [editMediaFiles, setEditMediaFiles] = useState([]);
+
+  // Rejection reasons options
+  const rejectionReasons = [
+    'Inappropriate Content',
+    'Spam or Fake Review',
+    'Offensive Language',
+    'Irrelevant Feedback',
+    'Duplicate Submission',
+    'Violation of Guidelines',
+    'Other'
+  ];
 
   // Mock feedback data - in real app, this would come from API
   const mockFeedbacks = [
     {
       id: 1,
       customerName: 'Ahmed Hassan',
+      customerEmail: 'ahmed.hassan@email.com',
       customerPhone: '+92 300 1234567',
       customerId: 'CUST-001',
       kitchenId: 'KITCHEN-001',
@@ -43,7 +60,11 @@ const FeedbackDetail = () => {
       feedback: 'Great taste but delivery was a bit late. Overall satisfied with the quality. The chicken tikka was perfectly cooked and the pizza base was crispy. However, the delivery took longer than expected which affected the overall experience. Would definitely order again if delivery time improves.',
       createdAt: '2024-01-12 14:30:00',
       orderNumber: 'ORD-2024-001',
+      orderDate: '2024-01-12 12:00:00',
       orderTotal: 'PKR 1,250',
+      orderItems: [
+        { id: 1, name: 'Chicken Tikka Pizza', quantity: 1, price: 'PKR 1,250' }
+      ],
       mediaFiles: [
         {
           id: 1,
@@ -64,6 +85,7 @@ const FeedbackDetail = () => {
     {
       id: 2,
       customerName: 'Fatima Khan',
+      customerEmail: 'fatima.khan@email.com',
       customerPhone: '+92 301 2345678',
       customerId: 'CUST-002',
       kitchenId: 'KITCHEN-002',
@@ -75,7 +97,11 @@ const FeedbackDetail = () => {
       feedback: 'Excellent burger! Perfect taste and very fresh ingredients. Highly recommended. The beef patty was juicy and cooked to perfection. The vegetables were fresh and the sauce complemented the burger very well. Packaging was also great and kept the burger warm.',
       createdAt: '2024-01-11 18:45:00',
       orderNumber: 'ORD-2024-002',
+      orderDate: '2024-01-11 17:30:00',
       orderTotal: 'PKR 850',
+      orderItems: [
+        { id: 1, name: 'Beef Burger Deluxe', quantity: 1, price: 'PKR 850' }
+      ],
       mediaFiles: [
         {
           id: 3,
@@ -148,17 +174,45 @@ const FeedbackDetail = () => {
   };
 
   const confirmReject = () => {
+    // In a real app, this would call an API to reject the feedback
+    console.log('Rejecting feedback with reason:', rejectReason, 'and comment:', rejectComment);
     setFeedback({ ...feedback, status: 'rejected' });
     setShowRejectConfirmModal(false);
+    setRejectReason('');
     setRejectComment('');
-    // TODO: API call to update status with reject comment
-    alert('Feedback has been rejected');
+    alert('Feedback has been rejected successfully!');
+  };
+
+  const handleCancelReject = () => {
+    setShowRejectConfirmModal(false);
+    setRejectReason('');
+    setRejectComment('');
   };
 
   const handleSendToKitchen = () => {
+    setShowSendToKitchenModal(true);
+  };
+
+  const confirmSendToKitchen = () => {
+    // In a real app, this would call an API to send feedback to kitchen
+    console.log('Sending feedback to kitchen with comment:', sendToKitchenComment);
     setFeedback({ ...feedback, status: 'approved' });
-    // TODO: API call to send to kitchen
-    alert('Feedback has been sent to kitchen');
+    setShowSendToKitchenModal(false);
+    setSendToKitchenComment('');
+    alert('Feedback has been sent to kitchen successfully!');
+  };
+
+  const handleCancelSendToKitchen = () => {
+    setShowSendToKitchenModal(false);
+    setSendToKitchenComment('');
+  };
+
+  const handleShowOrderSummary = () => {
+    setShowOrderSummaryModal(true);
+  };
+
+  const handleCloseOrderSummary = () => {
+    setShowOrderSummaryModal(false);
   };
 
   const handleCancel = () => {
@@ -307,6 +361,14 @@ const FeedbackDetail = () => {
                   <dd className="text-sm text-gray-900">{feedback.customerName}</dd>
                 </div>
                 <div>
+                  <dt className="text-sm font-medium text-gray-500">Email</dt>
+                  <dd className="text-sm text-gray-900">{feedback.customerEmail}</dd>
+                </div>
+                <div>
+                    <dt className="text-sm font-medium text-gray-500 inline">Mobile Number</dt>
+                    <dd className="text-sm text-gray-900 ">{feedback.customerPhone}</dd>
+                  </div>
+                <div>
                   <dt className="text-sm font-medium text-gray-500">Customer ID</dt>
                   <dd className="text-sm text-gray-900">
                     <Link 
@@ -317,22 +379,26 @@ const FeedbackDetail = () => {
                     </Link>
                   </dd>
                 </div>
-                <div className="flex items-center">
-                  <PhoneIcon className="h-4 w-4 text-gray-400 mr-2" />
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500 inline">Phone Number</dt>
-                    <dd className="text-sm text-gray-900 ml-2 inline">{feedback.customerPhone}</dd>
-                  </div>
-                </div>
+               
+                  
+              
               </dl>
             </div>
 
             {/* Order Details */}
             <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <BuildingStorefrontIcon className="h-5 w-5 mr-2" />
-                Order Information
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                  <BuildingStorefrontIcon className="h-5 w-5 mr-2" />
+                  Order Information
+                </h3>
+                <button
+                  onClick={handleShowOrderSummary}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Show Summary
+                </button>
+              </div>
               <dl className="space-y-3">
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Kitchen</dt>
@@ -625,22 +691,177 @@ const FeedbackDetail = () => {
         isCommentRequired={true}
       />
 
-      {/* Reject Confirmation Modal */}
+      {/* Send to Kitchen Confirmation Modal */}
       <ConfirmationModal
-        isOpen={showRejectConfirmModal}
-        title="Reject Feedback"
-        message={`Are you sure you want to reject this feedback from ${feedback?.customerName}? This action cannot be undone.`}
-        comment={rejectComment}
-        onCommentChange={setRejectComment}
-        onConfirm={confirmReject}
-        onCancel={() => {
-          setShowRejectConfirmModal(false);
-          setRejectComment('');
-        }}
-        confirmButtonText="Reject"
-        confirmButtonColor="red"
+        isOpen={showSendToKitchenModal}
+        title="Send Feedback to Kitchen"
+        message={`Are you sure you want to send this feedback from ${feedback?.customerName} to the kitchen? The kitchen will be notified about this feedback.`}
+        comment={sendToKitchenComment}
+        onCommentChange={setSendToKitchenComment}
+        onConfirm={confirmSendToKitchen}
+        onCancel={handleCancelSendToKitchen}
+        confirmButtonText="Send to Kitchen"
+        confirmButtonColor="primary"
         isCommentRequired={true}
       />
+
+      {/* Custom Rejection Modal with Dropdown */}
+      {showRejectConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Reject Feedback
+              </h3>
+              <button
+                onClick={handleCancelReject}
+                className="text-neutral-500 hover:text-neutral-700"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-neutral-700 mb-4">
+                Are you sure you want to reject this feedback from {feedback?.customerName}? This action cannot be undone.
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  required
+                >
+                  <option value="">Select a reason</option>
+                  {rejectionReasons.map((reason) => (
+                    <option key={reason} value={reason}>
+                      {reason}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Additional Comments <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rejectComment}
+                  onChange={(e) => setRejectComment(e.target.value)}
+                  className="w-full p-2 border border-neutral-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Please provide additional details about the rejection..."
+                  rows={3}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelReject}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={!rejectReason.trim() || !rejectComment.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reject Feedback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Summary Modal */}
+      {showOrderSummaryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Order Summary
+              </h3>
+              <button
+                onClick={handleCloseOrderSummary}
+                className="text-neutral-500 hover:text-neutral-700"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Order Number */}
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Order Number</dt>
+                <dd className="text-sm text-gray-900 font-semibold">{feedback?.orderNumber}</dd>
+              </div>
+
+              {/* Kitchen Name */}
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Kitchen</dt>
+                <dd className="text-sm text-gray-900">{feedback?.kitchenName}</dd>
+              </div>
+
+              {/* Order Date */}
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Order Date</dt>
+                <dd className="text-sm text-gray-900">
+                  {feedback?.orderDate ? new Date(feedback.orderDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : 'N/A'}
+                </dd>
+              </div>
+
+              {/* Order Items */}
+              <div>
+                <dt className="text-sm font-medium text-gray-500 mb-2">Dishes Ordered</dt>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  {feedback?.orderItems && feedback.orderItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {feedback.orderItems.map((item) => (
+                        <div key={item.id} className="flex justify-between items-center">
+                          <div>
+                            <span className="text-sm text-gray-900">{item.name}</span>
+                            <span className="text-xs text-gray-500 ml-2">x{item.quantity}</span>
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{item.price}</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-gray-200 pt-2 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-900">Total</span>
+                          <span className="text-sm font-bold text-gray-900">{feedback?.orderTotal}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No order items available</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={handleCloseOrderSummary}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

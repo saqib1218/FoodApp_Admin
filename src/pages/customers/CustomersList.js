@@ -249,45 +249,45 @@ const CustomersList = () => {
         </p>
       </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white shadow rounded-lg mb-6">
-        <div className="p-4 border-b border-gray-200 sm:flex sm:items-center sm:justify-between">
-          <div className="relative rounded-md shadow-sm w-full sm:w-64">
+      {/* Filters and Search */}
+      <div className="mt-6 mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
             </div>
             <input
               type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="Search by name, phone, or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-              placeholder="Search by name, phone, or email..."
             />
           </div>
-          <div className="mt-3 sm:mt-0 sm:ml-4">
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <FunnelIcon className="-ml-1 mr-2 h-5 w-5 text-gray-400" aria-hidden="true" />
-              Filter
-            </button>
-          </div>
         </div>
+        <div className="sm:w-48">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <FunnelIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
+            Filters
+          </button>
+        </div>
+      </div>
 
-        {/* Filter Panel */}
-        {showFilters && (
-          <div className="p-4 border-b border-gray-200 grid grid-cols-1 gap-y-4 sm:grid-cols-4 sm:gap-x-6">
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="mt-4 mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label htmlFor="tag-filter" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tag
               </label>
               <select
-                id="tag-filter"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 value={filters.tag}
                 onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
               >
                 <option value="">All Tags</option>
                 {uniqueTags.map((tag) => (
@@ -298,42 +298,31 @@ const CustomersList = () => {
               </select>
             </div>
             <div>
-              <label htmlFor="last-order-filter" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Last Order Date (From)
               </label>
               <input
                 type="date"
-                id="last-order-filter"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 value={filters.lastOrderDate}
                 onChange={(e) => setFilters({ ...filters, lastOrderDate: e.target.value })}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
               />
             </div>
             <div>
-              <label htmlFor="lifetime-value-filter" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Min Lifetime Value (PKR)
               </label>
               <input
                 type="number"
-                id="lifetime-value-filter"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="e.g. 5000"
                 value={filters.lifetimeValue}
                 onChange={(e) => setFilters({ ...filters, lifetimeValue: e.target.value })}
-                placeholder="e.g. 5000"
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
               />
             </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                Reset Filters
-              </button>
-            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Customers Table */}
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">

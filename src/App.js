@@ -35,6 +35,7 @@ import FeedbackDetail from './pages/feedbacks/FeedbackDetail';
 // Protected Route Components
 import ProtectedRoute from './components/ProtectedRoute';
 import AddEditDish from './pages/kitchens/KitchenDetail/AddEditDish/AddEditDish';
+import KitchenDishDetailPage from './pages/kitchens/KitchenDishDetailPage';
 
 // Basic Authentication Route Component
 const AuthRoute = ({ children }) => {
@@ -84,7 +85,14 @@ function App() {
               <KitchenDetail />
             </ProtectedRoute>
           } />
-           <Route path="/kitchens/:id/AddEditDish" element={
+          
+          <Route path="/kitchens/:kitchenId/dishes/:dishId" element={
+            <ProtectedRoute permission="view_kitchens">
+              <KitchenDishDetailPage />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/kitchens/:id/AddEditDish" element={
             <ProtectedRoute permission="view_kitchens">
               <AddEditDish />
             </ProtectedRoute>

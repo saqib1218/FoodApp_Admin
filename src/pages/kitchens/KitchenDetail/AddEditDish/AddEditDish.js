@@ -8,6 +8,22 @@ const AddEditDish = () => {
   const { id: kitchenId } = useParams();
   const navigate = useNavigate();
   console.log(currency)
+  // Form data state
+  const [formData, setFormData] = useState({
+    dishName: '',
+    tagLine: '',
+    category: '',
+    dishType: '',
+    description: '',
+    preparationTime: ''
+  });
+
+  // Tags state
+  const [dishTags, setDishTags] = useState([]);
+  const [cuisineTags, setCuisineTags] = useState([]);
+  const [dishTagInput, setDishTagInput] = useState('');
+  const [cuisineTagInput, setCuisineTagInput] = useState('');
+
   // Customization toggle state
   const [allowCustomizations, setAllowCustomizations] = useState(false);
   const [allowNegotiation, setAllowNegotiation] = useState(false);
@@ -67,6 +83,8 @@ const AddEditDish = () => {
 
   // Add state for images at the top of the component
   const [selectedImages, setSelectedImages] = useState([]);
+  // Add state for videos at the top of the component
+  const [selectedVideos, setSelectedVideos] = useState([]);
   // Add state for audio file at the top of the component
   const [selectedAudio, setSelectedAudio] = useState(null);
   // Add state for thumbnail image at the top of the component
@@ -288,6 +306,47 @@ const AddEditDish = () => {
     setPendingAction(null);
   };
 
+  // Handle form input changes
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle tag input for dish tags
+  const handleDishTagKeyPress = (e) => {
+    if (e.key === 'Enter' && dishTagInput.trim()) {
+      e.preventDefault();
+      if (!dishTags.includes(dishTagInput.trim())) {
+        setDishTags([...dishTags, dishTagInput.trim()]);
+      }
+      setDishTagInput('');
+    }
+  };
+
+  // Handle tag input for cuisine tags
+  const handleCuisineTagKeyPress = (e) => {
+    if (e.key === 'Enter' && cuisineTagInput.trim()) {
+      e.preventDefault();
+      if (!cuisineTags.includes(cuisineTagInput.trim())) {
+        setCuisineTags([...cuisineTags, cuisineTagInput.trim()]);
+      }
+      setCuisineTagInput('');
+    }
+  };
+
+  // Remove dish tag
+  const removeDishTag = (tagToRemove) => {
+    setDishTags(dishTags.filter(tag => tag !== tagToRemove));
+  };
+
+  // Remove cuisine tag
+  const removeCuisineTag = (tagToRemove) => {
+    setCuisineTags(cuisineTags.filter(tag => tag !== tagToRemove));
+  };
+
   const handleVariationFormChange = (e) => {
     const { name, value } = e.target;
     setVariationForm(prev => ({
@@ -318,51 +377,236 @@ const AddEditDish = () => {
             <span className="section-title">Basic Information</span>
             <div className="flex-1 border-b border-gray-100 ml-4"></div>
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Dish Name
-            </label>
-            <input
-              type="text"
-              className="w-full p-2 border border-neutral-300 rounded-lg"
-              placeholder="Enter a dish name"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Tag Line
-            </label>
-            <input
-              type="text"
-              className="w-full p-2 border border-neutral-300 rounded-lg"
-              placeholder="Enter a tag line"
-            />
-          </div>
-         
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Dish Preparation Time
-            </label>
-            <input
-              type="number"
-              className="w-full p-2 border border-neutral-300 rounded-lg"
-              placeholder="Enter a dish preparation time in minutes"
-            />
-          </div>
           
-          <div className="mb-4">
+          {/* Dish Name and Tag Line in one row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Name
+              </label>
+              <input
+                type="text"
+                name="dishName"
+                value={formData.dishName}
+                onChange={handleFormChange}
+                className="w-full p-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Enter dish name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Tag Line
+              </label>
+              <input
+                type="text"
+                name="tagLine"
+                value={formData.tagLine}
+                onChange={handleFormChange}
+                className="w-full p-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Enter tag line"
+              />
+            </div>
+          </div>
+
+          {/* Dish Category and Dish Type in one row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Category
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleFormChange}
+                className="w-full p-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Select category</option>
+                <option value="appetizer">Appetizer</option>
+                <option value="main_course">Main Course</option>
+                <option value="dessert">Dessert</option>
+                <option value="beverage">Beverage</option>
+                <option value="snack">Snack</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Type
+              </label>
+              <select
+                name="dishType"
+                value={formData.dishType}
+                onChange={handleFormChange}
+                className="w-full p-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Select dish type</option>
+                <option value="vegetarian">Vegetarian</option>
+                <option value="non_vegetarian">Non-Vegetarian</option>
+                <option value="vegan">Vegan</option>
+                <option value="gluten_free">Gluten Free</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Dish Description */}
+          <div className="mb-6">
             <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Dish Preparation Type
+              Dish Description
             </label>
-            <select className="w-full p-2 border border-neutral-300 rounded-lg"
-             value={preparationType}
-             onChange={(e) => setPreparationType(e.target.value)}
-             >
-              <option value="made_only_after_order">Made Only After Order</option>
-              <option value="ready_during_the_day">Ready During the Day</option>
-              <option value="for_special_day">For a Special Day Only</option>
-              <option value="catering_package">Catering Package</option>
-            </select>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleFormChange}
+              className="w-full p-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              placeholder="Enter dish description"
+              rows={4}
+            />
+          </div>
+
+          {/* Dish Tags and Cuisine Tags in one row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Tags
+              </label>
+              <div className="border border-neutral-300 rounded-lg p-3 min-h-[120px] focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {dishTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeDishTag(tag)}
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={dishTagInput}
+                  onChange={(e) => setDishTagInput(e.target.value)}
+                  onKeyPress={handleDishTagKeyPress}
+                  className="w-full border-none outline-none text-sm"
+                  placeholder="Type and press Enter to add tags"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Cuisine
+              </label>
+              <div className="border border-neutral-300 rounded-lg p-3 min-h-[120px] focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {cuisineTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeCuisineTag(tag)}
+                        className="ml-2 text-green-600 hover:text-green-800"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={cuisineTagInput}
+                  onChange={(e) => setCuisineTagInput(e.target.value)}
+                  onKeyPress={handleCuisineTagKeyPress}
+                  className="w-full border-none outline-none text-sm"
+                  placeholder="Type and press Enter to add cuisine tags"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Customization and Negotiation toggles in one row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-800">
+                Allow customer customizations?
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allowCustomizations}
+                  onChange={e => setAllowCustomizations(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
+                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
+              </label>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-800">
+                Allow customer negotiation?
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allowNegotiation}
+                  onChange={e => setAllowNegotiation(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
+                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
+              </label>
+            </div>
+          </div>
+
+          {/* Daily Order Limit and Dish Preparation Type in one row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-neutral-800">
+                  Set daily order limit?
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableDailyOrderLimit}
+                    onChange={e => setEnableDailyOrderLimit(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
+                  <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
+                </label>
+              </div>
+              {enableDailyOrderLimit && (
+                <input
+                  type="number"
+                  value={dailyOrderLimit}
+                  onChange={(e) => setDailyOrderLimit(e.target.value)}
+                  className="w-full p-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter daily limit"
+                />
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Dish Preparation Type
+              </label>
+              <select 
+                className="w-full p-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                value={preparationType}
+                onChange={(e) => setPreparationType(e.target.value)}
+              >
+                <option value="made_only_after_order">Made Only After Order</option>
+                <option value="ready_during_the_day">Ready During the Day</option>
+                <option value="for_special_day">For a Special Day Only</option>
+                <option value="catering_package">Catering Package</option>
+              </select>
+            </div>
           </div>
           {preparationType !== 'for_special_day' ? (
             null
@@ -412,47 +656,6 @@ const AddEditDish = () => {
           </>
     
           )}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Description
-            </label>
-            <textarea
-              className="w-full p-2 border border-neutral-300 rounded-lg"
-              placeholder="Enter a description"
-              rows={3}
-            />
-          </div>
-          {/* Customization toggle */}
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-800">
-              Would you like to allow customers to request customizations for this dish?
-            </span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={allowCustomizations}
-                onChange={e => setAllowCustomizations(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
-              <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
-            </label>
-          </div>
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-medium text-neutral-800">
-              Would you like to allow customers to request negotiation?
-            </span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={allowNegotiation}
-                onChange={e => setAllowNegotiation(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
-              <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform transition-transform peer-checked:translate-x-5"></div>
-            </label>
-          </div>
            
           <div className="section-header">
             <span className="section-title">Dish Variation</span>
@@ -711,12 +914,12 @@ const AddEditDish = () => {
 
         
           <div className="section-header">
-            <span className="section-title">Dish Image Upload</span>
+            <span className="section-title">Dish Media</span>
             <div className="flex-1 border-b border-gray-100 ml-4"></div>
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Dish Thumbnail
+            Dish Display Picture
             </label>
             <input
               type="file"
@@ -747,7 +950,7 @@ const AddEditDish = () => {
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-neutral-700 mb-1">
-            Dish Image
+            Other Images
             </label>
             <input
               type="file"
@@ -793,17 +996,69 @@ const AddEditDish = () => {
               </div>
             )}
           </div>
-          <div className="section-header mt-8">
-            <span className="section-title">Dish Audio</span>
-            <div className="flex-1 border-b border-gray-100 ml-4"></div>
-          </div>
+
+          {/* Dish Videos Section */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Upload Dish Audio 
+              Dish Videos
             </label>
             <input
               type="file"
-              accept="audio/mp3"
+              accept="video/*"
+              multiple
+              className="w-full p-2 border border-neutral-300 rounded-lg"
+              onChange={e => {
+                const newFiles = Array.from(e.target.files);
+                setSelectedVideos(prev => {
+                  // Combine previous and new files, filter duplicates by name+size, and limit to 5
+                  const combined = [...prev, ...newFiles];
+                  const unique = combined.filter((file, idx, arr) =>
+                    arr.findIndex(f => f.name === file.name && f.size === file.size) === idx
+                  );
+                  return unique.slice(0, 5);
+                });
+              }}
+            />
+            {selectedVideos.length > 0 && (
+              <div className="mt-4">
+                <div className="font-medium text-sm mb-2">Video Preview</div>
+                <div className="flex flex-wrap gap-4">
+                  {selectedVideos.map((file, idx) => (
+                    <div key={idx} className="relative group">
+                      <video
+                        src={URL.createObjectURL(file)}
+                        className="object-cover rounded-lg border border-gray-200"
+                        style={{ height: '80px', width: '120px' }}
+                        controls={false}
+                        muted
+                      />
+                      <div className="absolute bottom-1 left-1 bg-black bg-opacity-60 text-white text-xs px-1 rounded">
+                        Video
+                      </div>
+                      <button
+                        type="button"
+                        className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow group-hover:opacity-100 opacity-80 transition"
+                        onClick={() => {
+                          setSelectedVideos(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                      >
+                        <XMarkIcon className="h-4 w-4 text-gray-600" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dish Audio Section */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Dish Audio
+            </label>
+            <input
+              type="file"
+              accept="audio/*"
               className="w-full p-2 border border-neutral-300 rounded-lg"
               onChange={e => {
                 const file = e.target.files[0];

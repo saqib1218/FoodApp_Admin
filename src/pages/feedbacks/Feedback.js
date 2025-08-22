@@ -5,7 +5,9 @@ import {
   PencilIcon, 
   TrashIcon,
   MagnifyingGlassIcon,
-  FunnelIcon
+  FunnelIcon,
+  ChevronUpIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 
 const Feedback = () => {
@@ -13,6 +15,12 @@ const Feedback = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [mobileFilter, setMobileFilter] = useState('');
+  const [kitchenFilter, setKitchenFilter] = useState('');
+  const [orderIdFilter, setOrderIdFilter] = useState('');
+  const [sortField, setSortField] = useState('');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   // Mock feedback data
   const [feedbacks, setFeedbacks] = useState([
@@ -90,14 +98,30 @@ const Feedback = () => {
 
   // Filter feedbacks based on search and status
   const filteredFeedbacks = feedbacks.filter(feedback => {
-    const matchesSearch = feedback.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         feedback.customerPhone.includes(searchTerm) ||
-                         feedback.kitchenName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         feedback.dishName.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch = feedback.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesMobile = feedback.customerPhone.includes(mobileFilter);
+    const matchesKitchen = feedback.kitchenName.toLowerCase().includes(kitchenFilter.toLowerCase());
+    const matchesOrderId = feedback.orderId ? feedback.orderId.toLowerCase().includes(orderIdFilter.toLowerCase()) : true;
     const matchesStatus = statusFilter === 'all' || feedback.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesMobile && matchesKitchen && matchesOrderId && matchesStatus;
+  }).sort((a, b) => {
+    if (!sortField) return 0;
+    
+    let aValue = a[sortField];
+    let bValue = b[sortField];
+    
+    if (sortField === 'rating') {
+      aValue = Number(aValue);
+      bValue = Number(bValue);
+    } else if (typeof aValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+    
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
   });
 
   const getStatusBadge = (status) => {
@@ -124,6 +148,22 @@ const Feedback = () => {
     setSelectedFeedback(null);
   };
 
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? 
+      <ChevronUpIcon className="h-4 w-4 inline ml-1" /> : 
+      <ChevronDownIcon className="h-4 w-4 inline ml-1" />;
+  };
+
   return (
     <div className="">
       <div className="sm:flex sm:items-center">
@@ -145,30 +185,81 @@ const Feedback = () => {
             <input
               type="text"
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="Search by customer name, phone, kitchen, or dish..."
+              placeholder="Search by customer name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
         <div className="sm:w-48">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FunnelIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-            </div>
-            <select
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <FunnelIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
+            Filters
+          </button>
         </div>
       </div>
+
+      {/* Advanced Filters */}
+      {showAdvancedFilters && (
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mobile Number
+              </label>
+              <input
+                type="text"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Search mobile..."
+                value={mobileFilter}
+                onChange={(e) => setMobileFilter(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Kitchen Name
+              </label>
+              <input
+                type="text"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Search kitchen..."
+                value={kitchenFilter}
+                onChange={(e) => setKitchenFilter(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Order ID
+              </label>
+              <input
+                type="text"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Search order ID..."
+                value={orderIdFilter}
+                onChange={(e) => setOrderIdFilter(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feedback Table */}
       <div className="mt-8 flex flex-col">
@@ -187,11 +278,19 @@ const Feedback = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Order
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                      onClick={() => handleSort('status')}
+                    >
+                      Status {getSortIcon('status')}
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Rating
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                      onClick={() => handleSort('rating')}
+                    >
+                      Rating {getSortIcon('rating')}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions

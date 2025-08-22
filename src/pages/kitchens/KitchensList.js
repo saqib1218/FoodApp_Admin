@@ -195,149 +195,124 @@ const KitchensList = () => {
         </p>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
-        <div className="relative w-full sm:w-64 md:w-96">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-neutral-400" />
+      {/* Filters and Search */}
+      <div className="mt-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="Search by kitchen name or owner..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-neutral-300 rounded-md leading-5 bg-white placeholder-neutral-500 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            placeholder="Search by kitchen name or owner"
-          />
         </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
-          {/* <Link
-            to="/kitchens/onboarding"
-            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors text-sm font-medium"
-          >
-            Onboarding Queue
-          </Link> */}
+        <div className="sm:w-48">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors text-sm font-medium inline-flex items-center"
+            className="flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
           >
-            <FunnelIcon className="h-4 w-4 mr-1" />
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
+            <FunnelIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
+            Filters
           </button>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Advanced Filters */}
       {showFilters && (
-        <div className="bg-white p-4 rounded-md border border-neutral-200">
-          <div className="space-y-4">
-            {/* First Row - City, Cuisine, Status */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="city-filter" className="block text-sm font-medium text-neutral-700 mb-1">
-                  City
-                </label>
-                <select
-                  id="city-filter"
-                  value={filters.city}
-                  onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-                  className="block w-full pl-3 pr-10 py-2 text-base border border-neutral-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-                >
-                  <option value="">All Cities</option>
-                  {filterOptions.cities.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="cuisine-filter" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Cuisine
-                </label>
-                <select
-                  id="cuisine-filter"
-                  value={filters.cuisine}
-                  onChange={(e) => setFilters({ ...filters, cuisine: e.target.value })}
-                  className="block w-full pl-3 pr-10 py-2 text-base border border-neutral-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-                >
-                  <option value="">All Cuisines</option>
-                  {filterOptions.cuisines.map((cuisine) => (
-                    <option key={cuisine} value={cuisine}>
-                      {cuisine}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="status-filter" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Status
-                </label>
-                <select
-                  id="status-filter"
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="block w-full pl-3 pr-10 py-2 text-base border border-neutral-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-                >
-                  <option value="">All Statuses</option>
-                  {filterOptions.statuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                City
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={filters.city}
+                onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+              >
+                <option value="">All Cities</option>
+                {filterOptions.cities.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
             </div>
-            
-            {/* Second Row - Phone Number, Kitchen ID, Order ID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="phone-filter" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="text"
-                  id="phone-filter"
-                  value={filters.phoneNumber}
-                  onChange={(e) => setFilters({ ...filters, phoneNumber: e.target.value })}
-                  className="block w-full pl-3 pr-3 py-2 text-base border border-neutral-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-                  placeholder="Enter phone number"
-                />
-              </div>
-              <div>
-                <label htmlFor="kitchen-id-filter" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Kitchen ID
-                </label>
-                <input
-                  type="text"
-                  id="kitchen-id-filter"
-                  value={filters.kitchenId}
-                  onChange={(e) => setFilters({ ...filters, kitchenId: e.target.value })}
-                  className="block w-full pl-3 pr-3 py-2 text-base border border-neutral-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-                  placeholder="Enter kitchen ID"
-                />
-              </div>
-              <div>
-                <label htmlFor="order-id-filter" className="block text-sm font-medium text-neutral-700 mb-1">
-                  Order ID
-                </label>
-                <input
-                  type="text"
-                  id="order-id-filter"
-                  value={filters.orderId}
-                  onChange={(e) => setFilters({ ...filters, orderId: e.target.value })}
-                  className="block w-full pl-3 pr-3 py-2 text-base border border-neutral-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-                  placeholder="Enter order ID"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cuisine
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={filters.cuisine}
+                onChange={(e) => setFilters({ ...filters, cuisine: e.target.value })}
+              >
+                <option value="">All Cuisines</option>
+                {filterOptions.cuisines.map((cuisine) => (
+                  <option key={cuisine} value={cuisine}>
+                    {cuisine}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={resetFilters}
-              className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors text-sm font-medium"
-            >
-              Reset Filters
-            </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="text"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Search phone..."
+                value={filters.phoneNumber}
+                onChange={(e) => setFilters({ ...filters, phoneNumber: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Kitchen ID
+              </label>
+              <input
+                type="text"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Search kitchen ID..."
+                value={filters.kitchenId}
+                onChange={(e) => setFilters({ ...filters, kitchenId: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Order ID
+              </label>
+              <input
+                type="text"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Search order ID..."
+                value={filters.orderId}
+                onChange={(e) => setFilters({ ...filters, orderId: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              >
+                <option value="">All Status</option>
+                {filterOptions.statuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       )}
@@ -407,9 +382,9 @@ const KitchensList = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
                         to={`/kitchens/${kitchen.id}`}
-                        className="text-primary-600 hover:text-primary-800 font-medium"
+                        className="text-neutral-600 hover:text-neutral-800 font-medium inline-flex items-center"
                       >
-                        View
+                        <EyeIcon className="h-5 w-5" />
                       </Link>
                     </td>
                   </tr>

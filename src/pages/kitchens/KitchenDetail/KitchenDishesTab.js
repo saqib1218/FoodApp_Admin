@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { XMarkIcon, PencilIcon, EyeIcon,PlusIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PencilIcon, EyeIcon, PlusIcon, MagnifyingGlassIcon, FunnelIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useParams, useNavigate } from 'react-router-dom';
 import { kitchenDishService } from '../../../services/kitchens/kitchenDishService';
 import { useAuth } from '../../../context/useAuth';
@@ -15,16 +15,20 @@ const KitchenDishesTab = () => {
   // State variables
   const [dishes, setDishes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showDishModal, setShowDishModal] = useState(false);
   const [selectedDish, setSelectedDish] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusComment, setStatusComment] = useState('');
   const [newStatus, setNewStatus] = useState('');
-
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortField, setSortField] = useState('');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   const [filters, setFilters] = useState({
     status: 'all',
-    category: 'all'
+    category: 'all',
+    dishType: 'all',
+    lastUpdated: 'all'
   });
   const [categories, setCategories] = useState([]);
 
@@ -50,10 +54,9 @@ const KitchenDishesTab = () => {
     fetchDishData();
   }, [kitchenId]);
 
-  // Handle dish view
+  // Handle dish view - navigate to detail page
   const handleViewDish = (dish) => {
-    setSelectedDish(dish);
-    setShowDishModal(true);
+    navigate(`/kitchens/${kitchenId}/dishes/${dish.id}`);
   };
   const handleAddDish = () => {
     navigate(`/kitchens/${kitchenId}/AddEditDish`);
@@ -95,12 +98,82 @@ const KitchenDishesTab = () => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  // Filter dishes
+  // Handle sorting
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Get sort icon
+  const getSortIcon = (field) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? 
+      <ChevronUpIcon className="h-4 w-4 inline ml-1" /> : 
+      <ChevronDownIcon className="h-4 w-4 inline ml-1" />;
+  };
+
+  // Filter and sort dishes
   const filteredDishes = dishes.filter(dish => {
-    return (
-      (filters.status === 'all' || dish.status === filters.status) &&
-      (filters.category === 'all' || dish.category === filters.category)
-    );
+    const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filters.status === 'all' || dish.status === filters.status;
+    const matchesCategory = filters.category === 'all' || dish.category === filters.category;
+    const matchesDishType = filters.dishType === 'all' || dish.dishType === filters.dishType;
+    
+    let matchesLastUpdated = true;
+    if (filters.lastUpdated !== 'all') {
+      const dishDate = new Date(dish.lastStatusChange || dish.updatedAt || dish.createdAt);
+      const now = new Date();
+      const daysDiff = Math.floor((now - dishDate) / (1000 * 60 * 60 * 24));
+      
+      switch (filters.lastUpdated) {
+        case 'today':
+          matchesLastUpdated = daysDiff === 0;
+          break;
+        case 'week':
+          matchesLastUpdated = daysDiff <= 7;
+          break;
+        case 'month':
+          matchesLastUpdated = daysDiff <= 30;
+          break;
+        default:
+          matchesLastUpdated = true;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesCategory && matchesDishType && matchesLastUpdated;
+  }).sort((a, b) => {
+    if (!sortField) return 0;
+    
+    let aValue = a[sortField];
+    let bValue = b[sortField];
+    
+    // Handle specific field mappings
+    if (sortField === 'name') {
+      aValue = a.name;
+      bValue = b.name;
+    } else if (sortField === 'dishType') {
+      aValue = a.dishType || '';
+      bValue = b.dishType || '';
+    } else if (sortField === 'lastUpdated') {
+      aValue = new Date(a.lastStatusChange || a.updatedAt || a.createdAt);
+      bValue = new Date(b.lastStatusChange || b.updatedAt || b.createdAt);
+    }
+    
+    // Handle different data types
+    if (aValue instanceof Date && bValue instanceof Date) {
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+    
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
   });
 
   // Format currency
@@ -156,46 +229,104 @@ const KitchenDishesTab = () => {
         </PermissionButton>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 bg-white rounded-lg border border-neutral-200 p-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="w-full sm:w-auto">
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Status
-            </label>
-            <select
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              className="w-full sm:w-40 p-2 border border-neutral-300 rounded-lg text-sm"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Rejected</option>
-              <option value="draft">Draft</option>
-            </select>
-          </div>
-          <div className="w-full sm:w-auto">
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Category
-            </label>
-            <select
-              name="category"
-              value={filters.category}
-              onChange={handleFilterChange}
-              className="w-full sm:w-48 p-2 border border-neutral-300 rounded-lg text-sm"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.name}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+      {/* Filters and Search */}
+      <div className="mt-6 mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="Search by dish name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
+        <div className="sm:w-48">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <FunnelIcon className="h-5 w-5 mr-2 text-gray-400" aria-hidden="true" />
+            Filters
+          </button>
+        </div>
       </div>
+
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="mt-4 mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={filters.category}
+                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+              >
+                <option value="all">All Categories</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dish Type
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={filters.dishType}
+                onChange={(e) => setFilters({ ...filters, dishType: e.target.value })}
+              >
+                <option value="all">All Types</option>
+                <option value="vegetarian">Vegetarian</option>
+                <option value="non-vegetarian">Non-Vegetarian</option>
+                <option value="vegan">Vegan</option>
+                <option value="gluten-free">Gluten-Free</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Last Updated
+              </label>
+              <select
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                value={filters.lastUpdated}
+                onChange={(e) => setFilters({ ...filters, lastUpdated: e.target.value })}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Dish Add Modal */}
      
       {/* Dishes List */}
@@ -213,8 +344,12 @@ const KitchenDishesTab = () => {
             <table className="min-w-full divide-y divide-neutral-200">
               <thead className="bg-neutral-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Dish
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:bg-neutral-100 select-none"
+                    onClick={() => handleSort('name')}
+                  >
+                    Dish {getSortIcon('name')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     Category
@@ -222,11 +357,19 @@ const KitchenDishesTab = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     Price
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Status
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:bg-neutral-100 select-none"
+                    onClick={() => handleSort('status')}
+                  >
+                    Status {getSortIcon('status')}
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Last Updated
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:bg-neutral-100 select-none"
+                    onClick={() => handleSort('lastUpdated')}
+                  >
+                    Last Updated {getSortIcon('lastUpdated')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
                     Actions
@@ -315,143 +458,7 @@ const KitchenDishesTab = () => {
         )}
       </div>
 
-      {/* Dish Detail Modal */}
-      {showDishModal && selectedDish && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-neutral-900">
-                Dish Details
-              </h3>
-              <button
-                onClick={() => setShowDishModal(false)}
-                className="text-neutral-500 hover:text-neutral-700"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <div className="aspect-w-4 aspect-h-3 mb-4 bg-neutral-100 rounded-lg overflow-hidden">
-                  {selectedDish.image ? (
-                    <img
-                      src={selectedDish.image}
-                      alt={selectedDish.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-neutral-200 flex items-center justify-center">
-                      <span className="text-neutral-400">No Image</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(selectedDish.status)}`}>
-                    {selectedDish.status.charAt(0).toUpperCase() + selectedDish.status.slice(1)}
-                  </span>
-                  <span className="text-sm text-neutral-500">
-                    ID: {selectedDish.id}
-                  </span>
-                </div>
-                
-                <h4 className="text-xl font-medium text-neutral-900 mb-2">{selectedDish.name}</h4>
-                <p className="text-neutral-700 mb-4">{selectedDish.description}</p>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <h5 className="text-sm font-medium text-neutral-500">Price</h5>
-                    <p className="text-neutral-900">{formatCurrency(selectedDish.price)}</p>
-                  </div>
-                  <div>
-                    <h5 className="text-sm font-medium text-neutral-500">Category</h5>
-                    <p className="text-neutral-900">{selectedDish.category}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h5 className="text-sm font-medium text-neutral-500 mb-2">Ingredients</h5>
-                <ul className="list-disc pl-5 mb-4 text-neutral-700">
-                  {selectedDish.ingredients?.map((ingredient, index) => (
-                    <li key={index}>{ingredient}</li>
-                  )) || <li>No ingredients listed</li>}
-                </ul>
-                
-                <h5 className="text-sm font-medium text-neutral-500 mb-2">Dietary Information</h5>
-                <div className="mb-4">
-                  {selectedDish.dietaryInfo?.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedDish.dietaryInfo.map((info, index) => (
-                        <span 
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800"
-                        >
-                          {info}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-neutral-500">No dietary information available</p>
-                  )}
-                </div>
-                
-                <h5 className="text-sm font-medium text-neutral-500 mb-2">Additional Information</h5>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <h6 className="text-xs text-neutral-500">Preparation Time</h6>
-                    <p className="text-neutral-700">{selectedDish.prepTime || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <h6 className="text-xs text-neutral-500">Spice Level</h6>
-                    <p className="text-neutral-700">{selectedDish.spiceLevel || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <h6 className="text-xs text-neutral-500">Created On</h6>
-                    <p className="text-neutral-700">
-                      {new Date(selectedDish.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <h6 className="text-xs text-neutral-500">Last Updated</h6>
-                    <p className="text-neutral-700">
-                      {new Date(selectedDish.updatedAt || selectedDish.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                
-                {hasPermission('edit_kitchen_dish') && (
-                  <div className="flex justify-end space-x-3 mt-6">
-                    {selectedDish.status !== 'active' && (
-                      <button
-                        onClick={() => {
-                          setShowDishModal(false);
-                          handleStatusChange(selectedDish, 'active');
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors text-sm font-medium"
-                      >
-                        Approve Dish
-                      </button>
-                    )}
-                    {selectedDish.status !== 'rejected' && (
-                      <button
-                        onClick={() => {
-                          setShowDishModal(false);
-                          handleStatusChange(selectedDish, 'rejected');
-                        }}
-                        className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors text-sm font-medium"
-                      >
-                        Reject Dish
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Status Change Modal */}
       {showStatusModal && selectedDish && (
