@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/useAuth';
-import { kitchenMediaService } from '../../../services/kitchens/kitchenMediaService';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import { mockKitchenMediaService } from '../../../utils/mockServiceHelpers';
 import { KitchenContext } from './index';
 import PermissionButton from '../../../components/PermissionButton';
 import ConfirmationModal from '../../../components/ConfirmationModal';
@@ -29,8 +30,8 @@ const KitchenMediaTab = () => {
     const fetchKitchenMedia = async () => {
       try {
         setIsLoadingMedia(true);
-        const media = await kitchenMediaService.getKitchenMedia(kitchenId);
-        setKitchenMedia(media);
+        const mediaData = await mockKitchenMediaService.getKitchenMedia(kitchenId);
+        setKitchenMedia(mediaData);
       } catch (err) {
         console.error('Failed to load kitchen media:', err);
       } finally {

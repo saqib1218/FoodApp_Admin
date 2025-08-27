@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { XMarkIcon, PencilIcon, EyeIcon, PlusIcon, MagnifyingGlassIcon, FunnelIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useParams, useNavigate } from 'react-router-dom';
-import { kitchenDishService } from '../../../services/kitchens/kitchenDishService';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import { mockKitchenDishService } from '../../../utils/mockServiceHelpers';
 import { useAuth } from '../../../context/useAuth';
 import { KitchenContext } from './index';
 import PermissionButton from '../../../components/PermissionButton';
@@ -39,8 +40,8 @@ const KitchenDishesTab = () => {
       try {
         setIsLoading(true);
         const [dishesData, categoriesData] = await Promise.all([
-          kitchenDishService.getKitchenDishes(kitchenId),
-          kitchenDishService.getDishCategories()
+          mockKitchenDishService.getKitchenDishes(kitchenId),
+          mockKitchenDishService.getDishCategories()
         ]);
         setDishes(dishesData);
         setCategories(categoriesData);
@@ -75,7 +76,7 @@ const KitchenDishesTab = () => {
 
     try {
       setIsLoading(true);
-      await kitchenDishService.updateDishStatus(selectedDish.id, newStatus, statusComment);
+      await mockKitchenDishService.updateDishStatus(selectedDish.id, newStatus, statusComment);
       
       // Update local state
       setDishes(dishes.map(dish => 

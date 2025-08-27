@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { PermissionsContext } from './context/PermissionsContext';
+import { PermissionProvider } from './contexts/PermissionContext';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -56,96 +57,152 @@ function App() {
   const { userPermissions } = useAuth();
   
   return (
-    <PermissionsContext.Provider value={userPermissions}>
-      <Routes>
-        {/* Auth Routes */}
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-        </Route>
-        
-        {/* Unauthorized Route */}
-        <Route path="/unauthorized" element={<Unauthorized />} />
-        
-        {/* Protected Admin Routes */}
-        <Route element={
-          <AuthRoute>
-            <MainLayout />
-          </AuthRoute>
-        }>
-          <Route path="/" element={<Dashboard />} />
+    <PermissionProvider>
+      <PermissionsContext.Provider value={userPermissions}>
+        <Routes>
+          {/* Auth Routes */}
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<Login />} />
+          </Route>
           
-          <Route path="/kitchens" element={
-            <ProtectedRoute permission="view_kitchens">
-              <KitchensList />
-            </ProtectedRoute>
-          } />
+          {/* Unauthorized Route */}
+          <Route path="/unauthorized" element={<Unauthorized />} />
           
-          <Route path="/kitchens/:id" element={
-            <ProtectedRoute permission="view_kitchens">
-              <KitchenDetail />
-            </ProtectedRoute>
-          } />
+          {/* Protected Admin Routes */}
+          <Route element={
+            <AuthRoute>
+              <MainLayout />
+            </AuthRoute>
+          }>
+            <Route path="/" element={
+              <ProtectedRoute routeName="dashboard">
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/kitchens" element={
+              <ProtectedRoute routeName="kitchens">
+                <KitchensList />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/kitchens/:id" element={
+              <ProtectedRoute routeName="kitchens">
+                <KitchenDetail />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/kitchens/:kitchenId/dishes/:dishId" element={
+              <ProtectedRoute routeName="kitchens">
+                <KitchenDishDetailPage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/kitchens/:id/AddEditDish" element={
+              <ProtectedRoute routeName="kitchens">
+                <AddEditDish />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/onboarding" element={
+              <ProtectedRoute routeName="kitchens">
+                <OnboardingQueue />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/orders" element={
+              <ProtectedRoute routeName="orders">
+                <OrdersList />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/orders/:id" element={
+              <ProtectedRoute routeName="orders">
+                <OrderDetail />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/engagement" element={
+              <ProtectedRoute routeName="engagement">
+                <EngagementCenter />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/customers" element={
+              <ProtectedRoute routeName="customers">
+                <CustomersList />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/customers/:id" element={
+              <ProtectedRoute routeName="customers">
+                <CustomerDetail />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/parteners" element={
+              <ProtectedRoute routeName="partners">
+                <PartenerList />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/parteners/:id" element={
+              <ProtectedRoute routeName="partners">
+                <PartenerDetail />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/users" element={
+              <ProtectedRoute routeName="users">
+                <UserManagementList />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/users/:id" element={
+              <ProtectedRoute routeName="users">
+                <UserDetail />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/discounts" element={
+              <ProtectedRoute routeName="discounts">
+                <Discounts />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/feedback" element={
+              <ProtectedRoute routeName="feedback">
+                <Feedback />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/feedback/:id" element={
+              <ProtectedRoute routeName="feedback">
+                <FeedbackDetail />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/reports" element={
+              <ProtectedRoute routeName="reports">
+                <Reports />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/settings" element={
+              <ProtectedRoute routeName="settings">
+                <Settings />
+              </ProtectedRoute>
+            } />
+            
+            {/* Permissions Demo Page */}
+            <Route path="/permissions-demo" element={<PermissionsDemo />} />
+          </Route>
           
-          <Route path="/kitchens/:kitchenId/dishes/:dishId" element={
-            <ProtectedRoute permission="view_kitchens">
-              <KitchenDishDetailPage />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/kitchens/:id/AddEditDish" element={
-            <ProtectedRoute permission="view_kitchens">
-              <AddEditDish />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/onboarding" element={
-            <ProtectedRoute permission="view_kitchens">
-              <OnboardingQueue />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/orders" element={
-            <ProtectedRoute permission="view_orders">
-              <OrdersList />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/orders/:id" element={
-            <ProtectedRoute permission="view_orders">
-              <OrderDetail />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/engagement" element={
-            <ProtectedRoute permission="send_broadcast">
-              <EngagementCenter />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/customers" element={<CustomersList />} />
-          <Route path="/customers/:id" element={<CustomerDetail />} />
-          <Route path="/parteners" element={<PartenerList />} />
-          <Route path="/users" element={<UserManagementList />} />
-          <Route path="/discounts" element={<Discounts />} />
-          <Route path="/feedback" element={<Feedback />} />
-          <Route path="/feedback/:id" element={<FeedbackDetail />} />
-          <Route path="/parteners/:id" element={<PartenerDetail />} />
-          <Route path="/users/:id" element={
-            <ProtectedRoute permission="view_kitchens">
-              <UserDetail />
-            </ProtectedRoute>
-          } />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          
-          {/* Permissions Demo Page */}
-          <Route path="/permissions-demo" element={<PermissionsDemo />} />
-        </Route>
-        
-        {/* 404 Route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </PermissionsContext.Provider>
+          {/* 404 Route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </PermissionsContext.Provider>
+    </PermissionProvider>
   );
 }
 

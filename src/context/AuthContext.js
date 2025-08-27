@@ -1,9 +1,111 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 // Create context
 export const AuthContext = createContext();
+
+// Enhanced encryption utilities for secure storage
+const encryptData = (data) => {
+  try {
+    // Simple encryption - in production, use crypto-js for stronger encryption
+    return btoa(JSON.stringify(data));
+  } catch (error) {
+    console.error('Encryption failed:', error);
+    return null;
+  }
+};
+
+const decryptData = (encryptedData) => {
+  try {
+    return JSON.parse(atob(encryptedData));
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    return null;
+  }
+};
+
+// Enhanced Token storage utilities with persistent access token
+const TokenStorage = {
+  // Access token in encrypted sessionStorage (survives page refresh)
+  setAccessToken: (token) => {
+    if (token) {
+      // Store encrypted in sessionStorage for persistence
+      const encrypted = encryptData({ token, timestamp: Date.now() });
+      if (encrypted) {
+        sessionStorage.setItem('access_token', encrypted);
+      }
+      // Set axios header
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      sessionStorage.removeItem('access_token');
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  },
+  
+  getAccessToken: () => {
+    try {
+      const encrypted = sessionStorage.getItem('access_token');
+      if (!encrypted) return null;
+      
+      const decrypted = decryptData(encrypted);
+      return decrypted?.token || null;
+    } catch (error) {
+      console.error('Failed to get access token:', error);
+      return null;
+    }
+  },
+  
+  // User info in encrypted sessionStorage
+  setUserInfo: (userInfo) => {
+    if (userInfo) {
+      const encrypted = encryptData(userInfo);
+      if (encrypted) {
+        sessionStorage.setItem('user_info', encrypted);
+      }
+    } else {
+      sessionStorage.removeItem('user_info');
+    }
+  },
+  
+  getUserInfo: () => {
+    const encrypted = sessionStorage.getItem('user_info');
+    return encrypted ? decryptData(encrypted) : null;
+  },
+  
+  // Note: Refresh token not used in this implementation
+  // Backend only provides access token
+  
+  // Store token expiry info
+  setTokenExpiry: (expiresIn) => {
+    const expiryTime = Date.now() + (expiresIn * 1000);
+    const encrypted = encryptData({ expiryTime });
+    if (encrypted) {
+      sessionStorage.setItem('token_expiry', encrypted);
+    }
+  },
+  
+  getTokenExpiry: () => {
+    const encrypted = sessionStorage.getItem('token_expiry');
+    return encrypted ? decryptData(encrypted) : null;
+  },
+  
+  isTokenExpired: () => {
+    const tokenExpiry = TokenStorage.getTokenExpiry();
+    if (!tokenExpiry) return true;
+    
+    // Add 5-minute buffer for safety
+    return Date.now() >= (tokenExpiry.expiryTime - 300000);
+  },
+  
+  clearAll: () => {
+    delete axios.defaults.headers.common['Authorization'];
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('user_info');
+    sessionStorage.removeItem('token_expiry');
+    localStorage.removeItem('auth_token'); // Remove old token if exists
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -11,169 +113,120 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
+  
+  // Refs for token refresh management
+  const refreshTimeoutRef = useRef(null);
+  const isRefreshingRef = useRef(false);
 
-  // Check if token exists and is valid on app load
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token');
-      
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-      
-      try {
-        // For mock token, decode from base64
-        let decodedToken;
-        try {
-          decodedToken = JSON.parse(atob(token));
-        } catch {
-          // If not a mock token, try regular JWT decode
-          decodedToken = jwtDecode(token);
-        }
-        
-        const currentTime = Date.now() / 1000;
-        
-        if (decodedToken.exp < currentTime) {
-          // Token expired
-          logout();
-          setIsLoading(false);
-          return;
-        }
-        
-        // Set auth header for all future requests
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
-        // Get user data from token
-        setCurrentUser({
-          id: decodedToken.sub,
-          email: decodedToken.email,
-          name: decodedToken.name,
-        });
-        setUserRole(decodedToken.role);
-        setUserPermissions(decodedToken.permissions || []);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Auth token error:', error);
-        logout();
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Schedule automatic token refresh
+  const scheduleTokenRefresh = useCallback((expiresIn) => {
+    // Clear existing timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
     
-    checkAuth();
+    // Schedule refresh 5 minutes before expiry
+    const refreshTime = (expiresIn - 300) * 1000; // Convert to milliseconds, subtract 5 minutes
+    
+    if (refreshTime > 0) {
+      refreshTimeoutRef.current = setTimeout(() => {
+        refreshToken();
+      }, refreshTime);
+    }
   }, []);
 
-  // Login function - MOCK VERSION FOR DEVELOPMENT
+  // Note: Refresh token functionality not implemented
+  // Backend only provides access token without refresh capability
+  const refreshToken = useCallback(async () => {
+    console.log('Token refresh not available - redirecting to login');
+    logout();
+  }, []);
+
+  // Login function with real API integration
   const login = async (email, password) => {
     try {
-      // Mock credentials for development
-      const validCredentials = [
-        { 
-          email: 'admin@riwayat.pk', 
-          password: 'admin123', 
-          role: 'admin', 
-          name: 'Admin User',
-          permissions: [
-            "view_kitchens", 
-            "edit_kitchen", 
-            "approve_dish", 
-            "view_orders", 
-            "send_broadcast",
-            "edit_kitchen_user",
-            "delete_trusted_token",
-            "view_user_documents",
-            "add_kitchen_media",
-            "edit_kitchen_media",
-            "delete_kitchen_media",
-            "upload_kitchen_logo",
-            "set_banner_status",
-            "view_kitchen_addresses",
-            "edit_kitchen_addresses",
-            "add_kitchen_address"
-          ]
-        },
-        { 
-          email: 'ops@riwayat.pk', 
-          password: 'ops123', 
-          role: 'operations', 
-          name: 'Operations User',
-          permissions: ["view_kitchens", "view_orders", "view_user_documents"]
-        },
-        { 
-          email: 'support@riwayat.pk', 
-          password: 'support123', 
-          role: 'support', 
-          name: 'Support User',
-          permissions: ["view_kitchens", "view_orders"]
-        }
-      ];
+      setIsLoading(true);
       
-      // Check if credentials match
-      const matchedUser = validCredentials.find(
-        user => user.email === email && user.password === password
-      );
+      // Get API base URL from environment variables
+      const apiBaseUrl = process.env.REACT_APP_API_URL;
       
-      if (!matchedUser) {
-        return {
-          success: false,
-          message: 'Invalid email or password. Try using admin@riwayat.pk / admin123'
-        };
-      }
+      // Call your login API
+      const response = await axios.post(`${apiBaseUrl}/admin/auth/login`, {
+        email,
+        password
+      });
       
-      // Create a mock token
-      const mockToken = btoa(JSON.stringify({
-        sub: '12345',
-        email: matchedUser.email,
-        name: matchedUser.name,
-        role: matchedUser.role,
-        permissions: matchedUser.permissions,
-        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60 // 24 hours from now
-      }));
+      console.log('Login API Response:', response.data);
       
-      // Store token in localStorage
-      localStorage.setItem('auth_token', mockToken);
+      // Extract access token from the API response
+      const { access_token: accessToken } = response.data.data;
       
-      // Set auth header for all future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
+      // Decode the JWT access token to get user information
+      const decodedToken = jwtDecode(accessToken);
+      console.log('Decoded JWT Token:', decodedToken);
+      
+      // Calculate token expiry time (exp is in seconds, convert to milliseconds)
+      const expiresIn = decodedToken.exp - Math.floor(Date.now() / 1000);
+      
+      // Store access token securely with persistence
+      TokenStorage.setAccessToken(accessToken);
+      TokenStorage.setTokenExpiry(expiresIn);
+      
+      // Extract user info from decoded JWT payload
+      const userInfo = {
+        id: decodedToken.userId,
+        name: decodedToken.name,
+        email: decodedToken.email,
+        phone: decodedToken.phone,
+        role: decodedToken.role,
+        is_active: decodedToken.is_active,
+        permissions: decodedToken.permissions || [] // Add permissions if they exist in JWT
+      };
+      TokenStorage.setUserInfo(userInfo);
       
       // Update state
-      setCurrentUser({
-        id: '12345',
-        email: matchedUser.email,
-        name: matchedUser.name
-      });
-      setUserRole(matchedUser.role);
-      setUserPermissions(matchedUser.permissions);
+      setCurrentUser(userInfo);
       setIsAuthenticated(true);
+      setUserRole(decodedToken.role);
+      setUserPermissions(decodedToken.permissions || []);
+      
+      // Set up automatic token refresh (if you implement refresh later)
+      if (expiresIn > 0) {
+        scheduleTokenRefresh(expiresIn);
+      }
       
       return { success: true };
+      
     } catch (error) {
-      console.error('Login error:', error);
-      return {
-        success: false,
-        message: 'Login failed. Please try again.'
+      console.error('Login failed:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Login failed' 
       };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Logout function
-  const logout = () => {
-    // Remove token from localStorage
-    localStorage.removeItem('auth_token');
+  const logout = useCallback(() => {
+    // Clear refresh timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
     
-    // Remove auth header
-    delete axios.defaults.headers.common['Authorization'];
+    // Clear all tokens and user info
+    TokenStorage.clearAll();
     
     // Reset state
     setCurrentUser(null);
     setUserRole(null);
     setUserPermissions([]);
     setIsAuthenticated(false);
-  };
+  }, []);
 
   // Check if user has specific role
-  const hasRole = (requiredRole) => {
+  const hasRole = useCallback((requiredRole) => {
     if (!userRole) return false;
     
     // For simple role check
@@ -187,10 +240,10 @@ export const AuthProvider = ({ children }) => {
     }
     
     return false;
-  };
+  }, [userRole]);
 
   // Check if user has specific permission
-  const hasPermission = (requiredPermission) => {
+  const hasPermission = useCallback((requiredPermission) => {
     if (!userPermissions || userPermissions.length === 0) return false;
     
     // For simple permission check
@@ -204,7 +257,91 @@ export const AuthProvider = ({ children }) => {
     }
     
     return false;
-  };
+  }, [userPermissions]);
+
+  // Session restoration on app load
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const accessToken = TokenStorage.getAccessToken();
+        
+        if (!accessToken) {
+          setIsLoading(false);
+          return;
+        }
+        
+        // Decode the JWT to get user info and check expiry
+        try {
+          const decodedToken = jwtDecode(accessToken);
+          const currentTime = Math.floor(Date.now() / 1000);
+          
+          // Check if token is expired
+          if (decodedToken.exp < currentTime) {
+            console.log('Token expired, logging out');
+            logout();
+            setIsLoading(false);
+            return;
+          }
+          
+          // Restore session from decoded token
+          const userInfo = {
+            id: decodedToken.userId,
+            name: decodedToken.name,
+            email: decodedToken.email,
+            phone: decodedToken.phone,
+            role: decodedToken.role,
+            is_active: decodedToken.is_active,
+            permissions: decodedToken.permissions || []
+          };
+          
+          // Update stored user info in case it's missing
+          TokenStorage.setUserInfo(userInfo);
+          
+          // Restore session state
+          setCurrentUser(userInfo);
+          setIsAuthenticated(true);
+          setUserRole(decodedToken.role);
+          setUserPermissions(decodedToken.permissions || []);
+          
+          // Set axios header
+          axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+          
+          console.log('Session restored successfully');
+          
+        } catch (decodeError) {
+          console.error('Failed to decode token:', decodeError);
+          logout();
+        }
+      } catch (error) {
+        console.error('Session restoration failed:', error);
+        logout();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    restoreSession();
+  }, [logout]);
+
+  // Set up axios interceptor for handling 401 responses
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        // If we get a 401, the token is likely expired - logout user
+        if (error.response?.status === 401) {
+          console.log('Received 401 response - token expired, logging out');
+          logout();
+        }
+        
+        return Promise.reject(error);
+      }
+    );
+    
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, [logout]);
 
   const value = {
     currentUser,

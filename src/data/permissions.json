@@ -1,0 +1,312 @@
+{
+  "permissions": [
+    {
+      "id": 1,
+      "key": "admin.dashboard.view",
+      "name": "View Dashboard",
+      "description": "Allow access to view the admin dashboard with analytics and overview",
+      "category": "Dashboard",
+      "module": "dashboard"
+    },
+    {
+      "id": 2,
+      "key": "admin.user.view",
+      "name": "View Users",
+      "description": "Allow viewing user profiles and user management list",
+      "category": "User Management",
+      "module": "users"
+    },
+    {
+      "id": 3,
+      "key": "admin.user.create",
+      "name": "Create Users",
+      "description": "Allow creating new user accounts",
+      "category": "User Management",
+      "module": "users"
+    },
+    {
+      "id": 4,
+      "key": "admin.user.edit",
+      "name": "Edit Users",
+      "description": "Allow editing existing user information and profiles",
+      "category": "User Management",
+      "module": "users"
+    },
+    {
+      "id": 5,
+      "key": "admin.user.delete",
+      "name": "Delete Users",
+      "description": "Allow deleting user accounts",
+      "category": "User Management",
+      "module": "users"
+    },
+    {
+      "id": 6,
+      "key": "admin.kitchen.view",
+      "name": "View Kitchens",
+      "description": "Allow viewing kitchen profiles and kitchen management list",
+      "category": "Kitchen Management",
+      "module": "kitchens"
+    },
+    {
+      "id": 7,
+      "key": "admin.kitchen.create",
+      "name": "Create Kitchens",
+      "description": "Allow adding new kitchens to the platform",
+      "category": "Kitchen Management",
+      "module": "kitchens"
+    },
+    {
+      "id": 8,
+      "key": "admin.kitchen.edit",
+      "name": "Edit Kitchens",
+      "description": "Allow editing kitchen information, dishes, and settings",
+      "category": "Kitchen Management",
+      "module": "kitchens"
+    },
+    {
+      "id": 9,
+      "key": "admin.kitchen.delete",
+      "name": "Delete Kitchens",
+      "description": "Allow removing kitchens from the platform",
+      "category": "Kitchen Management",
+      "module": "kitchens"
+    },
+    {
+      "id": 10,
+      "key": "admin.partner.view",
+      "name": "View Partners",
+      "description": "Allow viewing partner profiles and partner management list",
+      "category": "Partner Management",
+      "module": "partners"
+    },
+    {
+      "id": 11,
+      "key": "admin.partner.create",
+      "name": "Create Partners",
+      "description": "Allow adding new partners to the platform",
+      "category": "Partner Management",
+      "module": "partners"
+    },
+    {
+      "id": 12,
+      "key": "admin.partner.edit",
+      "name": "Edit Partners",
+      "description": "Allow editing partner information and settings",
+      "category": "Partner Management",
+      "module": "partners"
+    },
+    {
+      "id": 13,
+      "key": "admin.partner.delete",
+      "name": "Delete Partners",
+      "description": "Allow removing partners from the platform",
+      "category": "Partner Management",
+      "module": "partners"
+    },
+    {
+      "id": 14,
+      "key": "admin.feedback.view",
+      "name": "View Feedback",
+      "description": "Allow viewing customer feedback and reviews",
+      "category": "Feedback Management",
+      "module": "feedback"
+    },
+    {
+      "id": 15,
+      "key": "admin.feedback.manage",
+      "name": "Manage Feedback",
+      "description": "Allow responding to and managing customer feedback",
+      "category": "Feedback Management",
+      "module": "feedback"
+    },
+    {
+      "id": 16,
+      "key": "admin.customer.view",
+      "name": "View Customers",
+      "description": "Allow viewing customer profiles and customer list",
+      "category": "Customer Management",
+      "module": "customers"
+    },
+    {
+      "id": 17,
+      "key": "admin.customer.edit",
+      "name": "Edit Customers",
+      "description": "Allow editing customer information and profiles",
+      "category": "Customer Management",
+      "module": "customers"
+    },
+    {
+      "id": 18,
+      "key": "admin.customer.delete",
+      "name": "Delete Customers",
+      "description": "Allow removing customer accounts",
+      "category": "Customer Management",
+      "module": "customers"
+    },
+    {
+      "id": 19,
+      "key": "admin.discount.view",
+      "name": "View Discounts",
+      "description": "Allow viewing discount campaigns and promotions",
+      "category": "Discount Management",
+      "module": "discounts"
+    },
+    {
+      "id": 20,
+      "key": "admin.discount.create",
+      "name": "Create Discounts",
+      "description": "Allow creating new discount campaigns and promotions",
+      "category": "Discount Management",
+      "module": "discounts"
+    },
+    {
+      "id": 21,
+      "key": "admin.discount.edit",
+      "name": "Edit Discounts",
+      "description": "Allow editing existing discount campaigns",
+      "category": "Discount Management",
+      "module": "discounts"
+    },
+    {
+      "id": 22,
+      "key": "admin.discount.delete",
+      "name": "Delete Discounts",
+      "description": "Allow removing discount campaigns",
+      "category": "Discount Management",
+      "module": "discounts"
+    },
+    {
+      "id": 23,
+      "key": "admin.setting.view",
+      "name": "View Settings",
+      "description": "Allow viewing system settings and configurations",
+      "category": "System Settings",
+      "module": "settings"
+    },
+    {
+      "id": 24,
+      "key": "admin.setting.edit",
+      "name": "Edit Settings",
+      "description": "Allow modifying system settings and configurations",
+      "category": "System Settings",
+      "module": "settings"
+    },
+    {
+      "id": 25,
+      "key": "admin.order.view",
+      "name": "View Orders",
+      "description": "Allow viewing order history and order management",
+      "category": "Order Management",
+      "module": "orders"
+    },
+    {
+      "id": 26,
+      "key": "admin.order.edit",
+      "name": "Edit Orders",
+      "description": "Allow editing order details and status",
+      "category": "Order Management",
+      "module": "orders"
+    },
+    {
+      "id": 27,
+      "key": "admin.order.cancel",
+      "name": "Cancel Orders",
+      "description": "Allow canceling orders and processing refunds",
+      "category": "Order Management",
+      "module": "orders"
+    },
+    {
+      "id": 28,
+      "key": "admin.engagement.view",
+      "name": "View Engagement",
+      "description": "Allow viewing engagement center and communication tools",
+      "category": "Engagement Management",
+      "module": "engagement"
+    },
+    {
+      "id": 29,
+      "key": "admin.engagement.send",
+      "name": "Send Communications",
+      "description": "Allow sending broadcast messages and notifications",
+      "category": "Engagement Management",
+      "module": "engagement"
+    },
+    {
+      "id": 30,
+      "key": "admin.reports.view",
+      "name": "View Reports",
+      "description": "Allow viewing analytics reports and business intelligence",
+      "category": "Reports & Analytics",
+      "module": "reports"
+    },
+    {
+      "id": 31,
+      "key": "admin.reports.export",
+      "name": "Export Reports",
+      "description": "Allow exporting reports and data for external analysis",
+      "category": "Reports & Analytics",
+      "module": "reports"
+    },
+    {
+      "id": 32,
+      "key": "admin.role.view",
+      "name": "View Roles",
+      "description": "Allow viewing roles and permission management",
+      "category": "Role Management",
+      "module": "roles"
+    },
+    {
+      "id": 33,
+      "key": "admin.role.create",
+      "name": "Create Roles",
+      "description": "Allow creating new roles with specific permissions",
+      "category": "Role Management",
+      "module": "roles"
+    },
+    {
+      "id": 34,
+      "key": "admin.role.edit",
+      "name": "Edit Roles",
+      "description": "Allow editing existing roles and their permissions",
+      "category": "Role Management",
+      "module": "roles"
+    },
+    {
+      "id": 35,
+      "key": "admin.role.delete",
+      "name": "Delete Roles",
+      "description": "Allow removing roles from the system",
+      "category": "Role Management",
+      "module": "roles"
+    }
+  ],
+  "categories": [
+    "Dashboard",
+    "User Management",
+    "Kitchen Management",
+    "Partner Management",
+    "Feedback Management",
+    "Customer Management",
+    "Discount Management",
+    "System Settings",
+    "Order Management",
+    "Engagement Management",
+    "Reports & Analytics",
+    "Role Management"
+  ],
+  "modules": [
+    "dashboard",
+    "users",
+    "kitchens",
+    "partners",
+    "feedback",
+    "customers",
+    "discounts",
+    "settings",
+    "orders",
+    "engagement",
+    "reports",
+    "roles"
+  ]
+}

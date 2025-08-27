@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { XMarkIcon, PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { kitchenAvailabilityService } from '../../../services/kitchens/kitchenAvailabilityService';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import { mockKitchenAvailabilityService } from '../../../utils/mockServiceHelpers';
 import { useAuth } from '../../../context/useAuth';
 import { KitchenContext } from './index';
 import PermissionButton from '../../../components/PermissionButton';
@@ -39,7 +40,7 @@ const KitchenAvailabilityTab = () => {
     const fetchAvailabilitySettings = async () => {
       try {
         setIsLoading(true);
-        const settings = await kitchenAvailabilityService.getKitchenAvailability(kitchenId);
+        const settings = await mockKitchenAvailabilityService.getKitchenAvailability(kitchenId);
         setAvailabilitySettings(settings);
       } catch (err) {
         console.error('Failed to load kitchen availability settings:', err);
@@ -106,7 +107,7 @@ const KitchenAvailabilityTab = () => {
         }
       };
       
-      await kitchenAvailabilityService.updateKitchenAvailability(
+      await mockKitchenAvailabilityService.updateKitchenAvailability(
         kitchenId,
         updatedSettings
       );

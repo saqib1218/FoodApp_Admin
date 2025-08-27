@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { usePermissions } from '../context/PermissionsContext';
+import { usePermissions as useOldPermissions } from '../context/PermissionsContext';
+import { usePermissions } from '../contexts/PermissionContext';
 import {
   Bars3Icon,
   XMarkIcon,
@@ -28,7 +29,8 @@ const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showActionButtons, setShowActionButtons] = useState(false);
   const { currentUser, logout } = useAuth();
-  const permissions = usePermissions();
+  const oldPermissions = useOldPermissions();
+  const { hasPermission, isPermissionsLoaded } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,26 +54,26 @@ const MainLayout = () => {
     setShowActionButtons(isModeration);
   }, [location]);
 
-  // Define navigation items with required permissions
+  // Define navigation items with required permissions (using database permission keys)
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: HomeIcon, permission: null }, // Always visible
-    { name: 'Partners', href: '/parteners', icon: BuildingOfficeIcon, permission: null },
-    { name: 'Kitchens', href: '/kitchens', icon: BuildingStorefrontIcon, permission: 'view_kitchens' },
-    // { name: 'Onboarding Queue', href: '/onboarding', icon: QueueListIcon, permission: 'view_kitchens' },
-    { name: 'Orders', href: '/orders', icon: ShoppingBagIcon, permission: 'view_orders' },
-    { name: 'Customers', href: '/customers', icon: UsersIcon, permission: null }, // Always visible for now
-    { name: 'Engagement', href: '/engagement', icon: ChatBubbleLeftRightIcon, permission: 'send_broadcast' },
-    { name: 'Feedback', href: '/feedback', icon: ChatBubbleBottomCenterTextIcon, permission: null }, // Always visible for now
+    { name: 'Dashboard', href: '/', icon: HomeIcon, permission: 'admin.dashboard.view' },
+    { name: 'Partners', href: '/parteners', icon: BuildingOfficeIcon, permission: 'admin.partner.view' },
+    { name: 'Kitchens', href: '/kitchens', icon: BuildingStorefrontIcon, permission: 'admin.kitchen.view' },
+    // { name: 'Onboarding Queue', href: '/onboarding', icon: QueueListIcon, permission: 'admin.kitchen.view' },
+    { name: 'Orders', href: '/orders', icon: ShoppingBagIcon, permission: 'admin.order.view' },
+    { name: 'Customers', href: '/customers', icon: UsersIcon, permission: 'admin.customer.view' },
+    { name: 'Engagement', href: '/engagement', icon: ChatBubbleLeftRightIcon, permission: 'admin.engagement.view' },
+    { name: 'Feedback', href: '/feedback', icon: ChatBubbleBottomCenterTextIcon, permission: 'admin.feedback.view' },
     { name: 'Permissions Demo', href: '/permissions-demo', icon: ShieldCheckIcon, permission: null }, // Demo page for RBAC
-    { name: 'Discounts', href: '/discounts', icon: TagIcon, permission: 'view_orders' },
-    { name: 'Users', href: '/users', icon: UserGroupIcon, permission: null }, // Always visible for now  // Always visible for now 
-    { name: 'Reports', href: '/reports', icon: ChartBarIcon, permission: null }, // Always visible for now
-    { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, permission: null }, // Always visible for now
+    { name: 'Discounts', href: '/discounts', icon: TagIcon, permission: 'admin.discount.view' },
+    { name: 'Users', href: '/users', icon: UserGroupIcon, permission: 'admin.users.view' },
+    { name: 'Reports', href: '/reports', icon: ChartBarIcon, permission: 'admin.reports.view' },
+    { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, permission: 'admin.setting.view' },
   ];
 
   // Filter navigation items based on permissions
   const filteredNavigation = navigation.filter(item => 
-    !item.permission || permissions.includes(item.permission)
+    !item.permission || (isPermissionsLoaded && hasPermission(item.permission))
   );
 
   return (
@@ -209,7 +211,7 @@ const MainLayout = () => {
         {/* Fixed action buttons for moderation screens - with permission checks */}
         {showActionButtons && (
           <div className="fixed bottom-8 right-8 flex flex-col space-y-4 z-50">
-            {permissions.includes('approve_dish') && (
+            {isPermissionsLoaded && hasPermission('admin.kitchen.edit') && (
               <button 
                 className="p-4 bg-green-500 text-white rounded-full shadow-lg hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 aria-label="Approve"
@@ -217,7 +219,7 @@ const MainLayout = () => {
                 <CheckCircleIcon className="h-6 w-6" aria-hidden="true" />
               </button>
             )}
-            {permissions.includes('edit_kitchen') && (
+            {isPermissionsLoaded && hasPermission('admin.kitchen.edit') && (
               <button 
                 className="p-4 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600"
                 aria-label="Reject"

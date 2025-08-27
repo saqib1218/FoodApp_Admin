@@ -1,58 +1,49 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { PencilIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { kitchenAddressService } from '../../../services/kitchens/kitchenAddressService';
+import { useGetKitchenAddressesQuery, useAddKitchenAddressMutation, useUpdateKitchenAddressMutation, useDeleteKitchenAddressMutation } from '../../../store/api/modules/kitchens/kitchensApi';
 import { useAuth } from '../../../context/useAuth';
 import { PermissionButton } from '../../../components/PermissionButton';
 import { KitchenContext } from './index';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const KitchenAddressesTab = () => {
-  const { id: kitchenId } = useContext(KitchenContext);
   const { hasPermission } = useAuth();
-  
+  const { kitchen } = useContext(KitchenContext);
+  const kitchenId = kitchen?.id;
+
   // State variables
-  const [kitchenAddresses, setKitchenAddresses] = useState([]);
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [addressForm, setAddressForm] = useState({
-    fullAddress: '',
-    city: '',
-    cityZone: '',
-    nearestLocation: '',
-    locationLink: '',
-    longitude: '',
-    latitude: '',
-    status: 'active'
-  });
+  const [modalAction, setModalAction] = useState(''); // 'add' or 'edit'
+  const [showAddressModal, setShowAddressModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmComment, setConfirmComment] = useState('');
-  const [modalAction, setModalAction] = useState(''); // 'add' or 'edit'
+  const [addressForm, setAddressForm] = useState({
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    type: 'primary'
+  });
 
-  // Fetch kitchen addresses
-  useEffect(() => {
-    const fetchKitchenAddresses = async () => {
-      if (hasPermission('view_kitchen_addresses')) {
-        try {
-          setIsLoadingAddresses(true);
-          console.log('Fetching addresses for kitchen ID:', kitchenId);
-          const addresses = await kitchenAddressService.getKitchenAddresses(kitchenId);
-          console.log('Fetched addresses:', addresses);
-          setKitchenAddresses(addresses);
-        } catch (err) {
-          console.error('Failed to load kitchen addresses:', err);
-        } finally {
-          setIsLoadingAddresses(false);
-        }
-      }
-    };
+  // RTK Query hooks
+  const {
+    data: kitchenAddresses = [],
+    isLoading: isLoadingAddresses,
+    error: addressesError
+  } = useGetKitchenAddressesQuery(kitchenId, {
+    skip: !kitchenId || !hasPermission('view_kitchen_addresses')
+  });
 
-    fetchKitchenAddresses();
-  }, [kitchenId, hasPermission]);
+  const [addKitchenAddress] = useAddKitchenAddressMutation();
+  const [updateKitchenAddress] = useUpdateKitchenAddressMutation();
+  const [deleteKitchenAddress] = useDeleteKitchenAddressMutation();
 
   // Handle add address
   const handleAddAddress = () => {
     setSelectedAddress(null);
+    setShowModal(true);
     setAddressForm({
       fullAddress: '',
       city: '',
@@ -115,35 +106,26 @@ const KitchenAddressesTab = () => {
   // Confirm address action
   const confirmAddressAction = async () => {
     try {
-      setIsLoadingAddresses(true);
-      
       if (modalAction === 'add') {
-        // Add new address
-        const newAddress = {
-          id: Date.now(), // Temporary ID
-          ...addressForm,
-          kitchenId: String(kitchenId)
-        };
-        setKitchenAddresses([...kitchenAddresses, newAddress]);
+        // Add new address using RTK Query mutation
+        await addKitchenAddress({
+          kitchenId,
+          addressData: addressForm
+        }).unwrap();
       } else {
-        // Update existing address
-        const updatedAddress = {
-          ...selectedAddress,
-          ...addressForm,
-          kitchenId: String(kitchenId)
-        };
-        const updatedAddresses = kitchenAddresses.map(addr => 
-          addr.id === selectedAddress.id ? updatedAddress : addr
-        );
-        setKitchenAddresses(updatedAddresses);
+        // Update existing address using RTK Query mutation
+        await updateKitchenAddress({
+          kitchenId,
+          addressId: selectedAddress.id,
+          addressData: addressForm
+        }).unwrap();
       }
       
       setShowConfirmModal(false);
       setConfirmComment('');
+      setShowAddressModal(false);
     } catch (err) {
       console.error('Failed to save address:', err);
-    } finally {
-      setIsLoadingAddresses(false);
     }
   };
 

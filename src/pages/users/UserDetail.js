@@ -12,7 +12,7 @@ import {
   LockOpenIcon,
   DocumentIcon
 } from '@heroicons/react/24/outline';
-import { kitchenUserService } from '../../services/kitchens/kitchenUserService';
+import { useGetUserByIdQuery, useUpdateUserMutation, useGetUserActivityQuery } from '../../store/api/modules/users/usersApi';
 import PermissionButton from '../../components/PermissionButton';
 import PermissionGate from '../../components/PermissionGate';
 import usePermission from '../../hooks/usePermission';
@@ -49,7 +49,7 @@ const UserDetail = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const userData = await kitchenUserService.getKitchenUserById(id);
+        const userData="123";
         setUser(userData);
         
         // Initialize edit form with user data
@@ -86,10 +86,12 @@ const UserDetail = () => {
     }));
   };
 
-  const handleEditSubmit = async (e) => {
+  const handleUpdateUser = async (e) => {
     e.preventDefault();
     try {
-      const updatedUser = await kitchenUserService.updateUserDetails(id, editForm);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const updatedUser = {};
       setUser(updatedUser);
       setShowEditModal(false);
     } catch (err) {
@@ -105,7 +107,9 @@ const UserDetail = () => {
   const confirmStatusUpdate = async () => {
     try {
       setIsLoading(true);
-      const updatedUser = await kitchenUserService.updateUserStatus(id, newStatus);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const updatedUser = {};
       setUser(updatedUser);
       setShowStatusModal(false);
       // Show success notification
@@ -125,7 +129,9 @@ const UserDetail = () => {
   const confirmPinUnblock = async () => {
     try {
       setIsLoading(true);
-      const updatedUser = await kitchenUserService.unblockUserPin(id);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const updatedUser = {};
       setUser(updatedUser);
       setShowPinUnblockModal(false);
       // Show success notification
@@ -147,7 +153,9 @@ const UserDetail = () => {
   const confirmDeleteToken = async () => {
     try {
       setIsLoading(true);
-      const updatedUser = await kitchenUserService.deleteTrustedToken(id, tokenToDelete, deleteComment);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const updatedUser = {};
       setUser(updatedUser);
       setShowDeleteTokenModal(false);
       // Show success notification
@@ -488,7 +496,7 @@ const UserDetail = () => {
               </button>
             </div>
             
-            <form onSubmit={handleEditSubmit}>
+            <form onSubmit={handleUpdateUser}>
               <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-neutral-700">

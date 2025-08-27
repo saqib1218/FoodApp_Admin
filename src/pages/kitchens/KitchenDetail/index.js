@@ -2,7 +2,8 @@ import React, { useState, useEffect, createContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
-import { kitchenService } from '../../../services/kitchens/kitchenService';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import { mockKitchenService } from '../../../utils/mockServiceHelpers';
 import { useAuth } from '../../../context/useAuth';
 import { PermissionGate } from '../../../components/PermissionGate';
 import ConfirmationModal from '../../../components/ConfirmationModal';
@@ -41,7 +42,7 @@ const KitchenDetail = () => {
     const fetchKitchenData = async () => {
       try {
         setIsLoading(true);
-        const data = await kitchenService.getKitchenById(id);
+        const data = await mockKitchenService.getKitchenById(id);
         setKitchen(data);
       } catch (err) {
         console.error('Failed to load kitchen:', err);
@@ -68,7 +69,7 @@ const KitchenDetail = () => {
   const confirmStatusUpdate = async () => {
     try {
       setIsLoading(true);
-      const updatedKitchen = await kitchenService.updateKitchenStatus(id, newStatus, statusComment);
+      const updatedKitchen = await mockKitchenService.updateKitchenStatus(id, newStatus, statusComment);
       setKitchen(updatedKitchen);
       setShowStatusModal(false);
       setStatusComment('');

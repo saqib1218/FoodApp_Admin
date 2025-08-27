@@ -2,22 +2,56 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon, EyeSlashIcon, KeyIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import {
+  useGetUsersQuery,
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useDeleteUserMutation,
+  useGetRolesQuery,
+  useGetRoleByIdQuery,
+  useCreateRoleMutation,
+  useUpdateRoleMutation,
+  useDeleteRoleMutation,
+  useGetPermissionsQuery,
+  useCreatePermissionMutation
+} from '../../store/api/modules/users/usersApi';
 
 const UserManagementList = () => {
   const [activeTab, setActiveTab] = useState('role');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Role management state
-  const [roles, setRoles] = useState([]);
+  // State declarations first
   const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
+  const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [showAssignPermissionsModal, setShowAssignPermissionsModal] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState(null);
+
+  // Role management state - RTK Query
+  const { data: rolesData, isLoading: isLoadingRoles, error: rolesError, refetch: refetchRoles } = useGetRolesQuery();
+  const roles = rolesData?.data?.roles || [];
+  
+  // Get role by ID for editing
+  const { data: roleByIdData, isLoading: isLoadingRoleById } = useGetRoleByIdQuery(editingRoleId, {
+    skip: !editingRoleId // Only fetch when editing a role
+  });
   const [roleForm, setRoleForm] = useState({
-    title: '',
-    status: 'active'
+    name: '',
+    description: '',
+    is_active: true
   });
 
-  // User management state
-  const [users, setUsers] = useState([]);
+  // User management state - RTK Query
+  const { data: usersData, isLoading: isLoadingUsers, error: usersError, refetch: refetchUsers } = useGetUsersQuery();
+  const users = usersData?.data?.users || [];
+  
+  // RTK Query mutations
+  const [createUser] = useCreateUserMutation();
+  const [updateUser] = useUpdateUserMutation();
+  const [deleteUser] = useDeleteUserMutation();
+  const [createRole] = useCreateRoleMutation();
+  const [updateRole] = useUpdateRoleMutation();
+  const [deleteRole] = useDeleteRoleMutation();
+  const [createPermission] = useCreatePermissionMutation();
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -36,28 +70,16 @@ const UserManagementList = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  // Permission management state
-  const [allPermissions, setAllPermissions] = useState([
-    { id: 1, name: 'view_kitchens', label: 'View Kitchens', scope: 'Kitchen Management', description: 'Allow viewing kitchen information and details' },
-    { id: 2, name: 'edit_kitchens', label: 'Edit Kitchens', scope: 'Kitchen Management', description: 'Allow editing kitchen information and settings' },
-    { id: 3, name: 'delete_kitchens', label: 'Delete Kitchens', scope: 'Kitchen Management', description: 'Allow deleting kitchen records' },
-    { id: 4, name: 'view_orders', label: 'View Orders', scope: 'Order Management', description: 'Allow viewing order information and history' },
-    { id: 5, name: 'edit_orders', label: 'Edit Orders', scope: 'Order Management', description: 'Allow editing order details and status' },
-    { id: 6, name: 'view_customers', label: 'View Customers', scope: 'Customer Management', description: 'Allow viewing customer profiles and information' },
-    { id: 7, name: 'edit_customers', label: 'Edit Customers', scope: 'Customer Management', description: 'Allow editing customer information' },
-    { id: 8, name: 'view_partners', label: 'View Partners', scope: 'Partner Management', description: 'Allow viewing partner information and profiles' },
-    { id: 9, name: 'edit_partners', label: 'Edit Partners', scope: 'Partner Management', description: 'Allow editing partner information and settings' },
-    { id: 10, name: 'send_broadcast', label: 'Send Broadcast', scope: 'Communication', description: 'Allow sending broadcast messages to users' },
-    { id: 11, name: 'view_reports', label: 'View Reports', scope: 'Analytics', description: 'Allow viewing system reports and analytics' },
-    { id: 12, name: 'manage_users', label: 'Manage Users', scope: 'User Management', description: 'Allow managing user accounts and permissions' }
-  ]);
+  // Permission management state - RTK Query
+  const { data: permissionsData, isLoading: isLoadingPermissions, error: permissionsError, refetch: refetchPermissions } = useGetPermissionsQuery();
+  const allPermissions = permissionsData?.data?.permissions || [];
   const [availablePermissions, setAvailablePermissions] = useState([]);
   const [assignedPermissions, setAssignedPermissions] = useState([]);
   const [draggedPermission, setDraggedPermission] = useState(null);
   const [showCreatePermissionModal, setShowCreatePermissionModal] = useState(false);
   const [permissionForm, setPermissionForm] = useState({
+    key: '',
     name: '',
-    scope: '',
     description: ''
   });
 
@@ -67,44 +89,120 @@ const UserManagementList = () => {
   const [pendingAction, setPendingAction] = useState(null);
   const [confirmationComment, setConfirmationComment] = useState('');
 
-  // Initialize available permissions from all permissions
-  useEffect(() => {
-    setAvailablePermissions(allPermissions);
-  }, [allPermissions]);
+  // Calculate available permissions by filtering out already assigned permissions
+  const currentAvailablePermissions = allPermissions.filter(permission => 
+    !assignedPermissions.some(assigned => assigned.id === permission.id)
+  );
+
+  // Enhanced tab click handlers with refetch functionality
+  const handleRoleTabClick = () => {
+    setActiveTab('role');
+    // Refetch roles and permissions when role tab is clicked
+    refetchRoles();
+    refetchPermissions();
+  };
+
+  const handleUserTabClick = () => {
+    setActiveTab('user');
+    // Refetch users when user tab is clicked
+    refetchUsers();
+  };
+
+  const handlePermissionsTabClick = () => {
+    setActiveTab('permissions');
+    // Refetch permissions when permissions tab is clicked
+    refetchPermissions();
+  };
 
   // Handle role creation
   const handleCreateRole = () => {
-    setRoleForm({ title: '', status: 'active' });
+    setRoleForm({ name: '', description: '', is_active: true });
     setAssignedPermissions([]);
     setShowCreateRoleModal(true);
   };
+
+  // Handle role editing
+  const handleEditRole = (role) => {
+    setEditingRoleId(role.id);
+    setShowEditRoleModal(true);
+  };
+
+  // Populate form when role data is fetched for editing
+  useEffect(() => {
+    if (roleByIdData?.data?.role && editingRoleId) {
+      const roleData = roleByIdData.data.role;
+      setRoleForm({
+        name: roleData.name,
+        description: roleData.description,
+        is_active: roleData.is_active
+      });
+      
+      // Set assigned permissions based on permissions array from API
+      if (roleData.permissions && roleData.permissions.length > 0) {
+        // The API now returns full permission objects, so we can use them directly
+        setAssignedPermissions(roleData.permissions);
+      } else {
+        // If no permissions, set empty array
+        setAssignedPermissions([]);
+      }
+    }
+  }, [roleByIdData, editingRoleId]); // Remove allPermissions from dependencies to prevent infinite loop
 
   const handleAssignPermissions = () => {
     setShowAssignPermissionsModal(true);
   };
 
-  const handleSaveRole = () => {
-    if (roleForm.title.trim() && assignedPermissions.length > 0) {
-      const newRole = {
-        id: Date.now(),
-        title: roleForm.title,
-        status: roleForm.status,
-        permissions: assignedPermissions,
-        createdDate: new Date().toISOString().split('T')[0]
-      };
-      setRoles(prev => [...prev, newRole]);
-      setShowCreateRoleModal(false);
-      setShowAssignPermissionsModal(false);
-      setRoleForm({ title: '', status: 'active' });
-      setAssignedPermissions([]);
+  const handleSaveRole = async (event) => {
+    event?.preventDefault();
+    if (roleForm.name.trim() && roleForm.description.trim() && assignedPermissions.length > 0) {
+      // Use RTK Query mutation to create role
+      try {
+        await createRole({
+          name: roleForm.name,
+          description: roleForm.description,
+          is_active: roleForm.is_active,
+          permissionIds: assignedPermissions.map(p => p.id)
+        }).unwrap();
+        setShowCreateRoleModal(false);
+        setShowAssignPermissionsModal(false);
+        setRoleForm({ name: '', description: '', is_active: true });
+        setAssignedPermissions([]);
+      } catch (error) {
+        console.error('Failed to create role:', error);
+      }
+    }
+  };
+
+  const handleSaveEditRole = async (event) => {
+    event?.preventDefault();
+    if (roleForm.name.trim() && roleForm.description.trim() && assignedPermissions.length > 0 && editingRoleId) {
+      // Use RTK Query mutation to update role
+      try {
+        await updateRole({
+          id: editingRoleId,
+          name: roleForm.name,
+          description: roleForm.description,
+          is_active: roleForm.is_active,
+          permissionIds: assignedPermissions.map(p => p.id)
+        }).unwrap();
+        setShowEditRoleModal(false);
+        setShowAssignPermissionsModal(false);
+        setRoleForm({ name: '', description: '', is_active: true });
+        setAssignedPermissions([]);
+        setEditingRoleId(null);
+      } catch (error) {
+        console.error('Failed to update role:', error);
+      }
     }
   };
 
   const handleCancelRole = () => {
     setShowCreateRoleModal(false);
+    setShowEditRoleModal(false);
     setShowAssignPermissionsModal(false);
-    setRoleForm({ title: '', status: 'active' });
+    setRoleForm({ name: '', description: '', is_active: true });
     setAssignedPermissions([]);
+    setEditingRoleId(null);
   };
 
   const handleDeleteRole = (roleId) => {
@@ -143,7 +241,7 @@ const UserManagementList = () => {
     setShowChangePasswordModal(true);
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (userForm.username && userForm.email && userForm.password && userForm.roleId) {
       const selectedRole = roles.find(role => role.id === parseInt(userForm.roleId));
       const newUser = {
@@ -156,13 +254,24 @@ const UserManagementList = () => {
         status: userForm.status,
         createdAt: new Date().toISOString()
       };
-      setUsers([...users, newUser]);
-      setShowCreateUserModal(false);
-      setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+      // Use RTK Query mutation to create user
+      try {
+        await createUser({
+          name: userForm.username,
+          email: userForm.email,
+          password: userForm.password,
+          mobile_number: userForm.mobileNumber,
+          role_id: parseInt(userForm.roleId)
+        }).unwrap();
+        setShowCreateUserModal(false);
+        setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+      } catch (error) {
+        console.error('Failed to create user:', error);
+      }
     }
   };
 
-  const handleUpdateUser = () => {
+  const handleUpdateUser = async () => {
     if (userForm.username && userForm.email && userForm.roleId && editingUser) {
       const selectedRole = roles.find(role => role.id === parseInt(userForm.roleId));
       const updatedUsers = users.map(user => 
@@ -178,10 +287,21 @@ const UserManagementList = () => {
             }
           : user
       );
-      setUsers(updatedUsers);
-      setShowEditUserModal(false);
-      setEditingUser(null);
-      setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+      // Use RTK Query mutation to update user
+      try {
+        await updateUser({
+          id: editingUser.id,
+          name: userForm.username,
+          email: userForm.email,
+          mobile_number: userForm.mobileNumber,
+          role_id: parseInt(userForm.roleId)
+        }).unwrap();
+        setShowEditUserModal(false);
+        setEditingUser(null);
+        setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+      } catch (error) {
+        console.error('Failed to update user:', error);
+      }
     }
   };
 
@@ -223,28 +343,29 @@ const UserManagementList = () => {
 
   // Permission management handlers
   const handleCreatePermission = () => {
-    setPermissionForm({ name: '', scope: '', description: '' });
+    setPermissionForm({ key: '', name: '', description: '' });
     setShowCreatePermissionModal(true);
   };
 
-  const handleSavePermission = () => {
-    if (permissionForm.name.trim() && permissionForm.scope.trim() && permissionForm.description.trim()) {
-      const newPermission = {
-        id: Date.now(),
-        name: permissionForm.name.toLowerCase().replace(/\s+/g, '_'),
-        label: permissionForm.name,
-        scope: permissionForm.scope,
-        description: permissionForm.description
-      };
-      setAllPermissions(prev => [...prev, newPermission]);
-      setShowCreatePermissionModal(false);
-      setPermissionForm({ name: '', scope: '', description: '' });
+  const handleSavePermission = async () => {
+    if (permissionForm.key.trim() && permissionForm.name.trim() && permissionForm.description.trim()) {
+      try {
+        await createPermission({
+          key: permissionForm.key,
+          name: permissionForm.name,
+          description: permissionForm.description
+        }).unwrap();
+        setShowCreatePermissionModal(false);
+        setPermissionForm({ key: '', name: '', description: '' });
+      } catch (error) {
+        console.error('Failed to create permission:', error);
+      }
     }
   };
 
   const handleCancelPermission = () => {
     setShowCreatePermissionModal(false);
-    setPermissionForm({ name: '', scope: '', description: '' });
+    setPermissionForm({ key: '', name: '', description: '' });
   };
 
   const handleDeletePermission = (permissionId) => {
@@ -256,18 +377,27 @@ const UserManagementList = () => {
   };
 
   // Confirmation handlers
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!confirmationComment.trim()) return;
 
     switch (confirmationAction) {
       case 'delete_role':
-        setRoles(prev => prev.filter(r => r.id !== pendingAction.roleId));
+        try {
+          await deleteRole(pendingAction.roleId).unwrap();
+        } catch (error) {
+          console.error('Failed to delete role:', error);
+        }
         break;
       case 'delete_user':
-        setUsers(prev => prev.filter(u => u.id !== pendingAction.userId));
+        try {
+          await deleteUser(pendingAction.userId).unwrap();
+        } catch (error) {
+          console.error('Failed to delete user:', error);
+        }
         break;
       case 'delete_permission':
-        setAllPermissions(prev => prev.filter(p => p.id !== pendingAction.permissionId));
+        // TODO: Implement deletePermission API mutation when available
+        console.log('Delete permission functionality not implemented - API endpoint needed');
         break;
     }
 
@@ -349,7 +479,7 @@ const UserManagementList = () => {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('role')}
+            onClick={handleRoleTabClick}
             className={`${
               activeTab === 'role'
                 ? 'border-primary-500 text-primary-600'
@@ -359,7 +489,7 @@ const UserManagementList = () => {
             Role
           </button>
           <button
-            onClick={() => setActiveTab('user')}
+            onClick={handleUserTabClick}
             className={`${
               activeTab === 'user'
                 ? 'border-primary-500 text-primary-600'
@@ -369,7 +499,7 @@ const UserManagementList = () => {
             Users
           </button>
           <button
-            onClick={() => setActiveTab('permissions')}
+            onClick={handlePermissionsTabClick}
             className={`${
               activeTab === 'permissions'
                 ? 'border-primary-500 text-primary-600'
@@ -396,10 +526,22 @@ const UserManagementList = () => {
               </button>
             </div>
 
-            {roles.length === 0 ? (
+            {isLoadingRoles ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="mt-4 text-gray-500">Loading roles...</p>
+              </div>
+            ) : rolesError ? (
+              <div className="text-center py-12">
+                <div className="text-red-500">
+                  <p className="text-lg font-medium">Error Loading Roles</p>
+                  <p className="mt-2">Failed to fetch roles. Please try again.</p>
+                </div>
+              </div>
+            ) : roles.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-500">
-                  <p className="text-lg font-medium">No Roles Created</p>
+                  <p className="text-lg font-medium">No Roles Found</p>
                   <p className="mt-2">Create your first role to get started with user management.</p>
                 </div>
               </div>
@@ -409,13 +551,13 @@ const UserManagementList = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role Title
+                        Role Name
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assigned Permissions
+                        Permissions
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -426,29 +568,40 @@ const UserManagementList = () => {
                     {roles.map((role) => (
                       <tr key={role.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{role.title}</div>
-                          <div className="text-sm text-gray-500">Created {role.createdDate}</div>
+                          <div className="text-sm font-medium text-gray-900">{role.name}</div>
+                          <div className="text-sm text-gray-500">{role.description}</div>
+                          <div className="text-xs text-gray-400">Created {new Date(role.created_at).toLocaleDateString()}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(role.status)}
+                          {getStatusBadge(role.is_active ? 'active' : 'inactive')}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
-                            {role.permissions.slice(0, 3).map((permission) => (
-                              <span key={permission.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                                {permission.label}
-                              </span>
-                            ))}
-                            {role.permissions.length > 3 && (
+                            {role.permissions && role.permissions.length > 0 ? (
+                              <>
+                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                  {role.permissions.length} permissions
+                                </span>
+                                {role.permissions.map((permission) => (
+                                  <span key={permission.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                                    {permission.key}
+                                  </span>
+                                ))}
+                              </>
+                            ) : (
                               <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
-                                +{role.permissions.length - 3} more
+                                No permissions
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
-                            <button className="text-blue-600 hover:text-blue-900 transition-colors" title="Edit role">
+                            <button 
+                              onClick={() => handleEditRole(role)}
+                              className="text-blue-600 hover:text-blue-900 transition-colors" 
+                              title="Edit role"
+                            >
                               <PencilIcon className="h-4 w-4" />
                             </button>
                             <button 
@@ -482,10 +635,22 @@ const UserManagementList = () => {
               </button>
             </div>
 
-            {users.length === 0 ? (
+            {isLoadingUsers ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="mt-4 text-gray-500">Loading users...</p>
+              </div>
+            ) : usersError ? (
+              <div className="text-center py-12">
+                <div className="text-red-500">
+                  <p className="text-lg font-medium">Error Loading Users</p>
+                  <p className="mt-2">Failed to fetch users. Please try again.</p>
+                </div>
+              </div>
+            ) : users.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-500">
-                  <p className="text-lg font-medium">No Users Created</p>
+                  <p className="text-lg font-medium">No Users Found</p>
                   <p className="mt-2">Create your first user to get started.</p>
                 </div>
               </div>
@@ -515,19 +680,19 @@ const UserManagementList = () => {
                     {users.map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                          <div className="text-sm text-gray-500">{user.mobileNumber}</div>
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="text-sm text-gray-500">{user.mobile_number || 'No mobile'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{user.email}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            {user.role?.title || 'No Role'}
+                            {user.roles && user.roles.length > 0 ? user.roles[0].role_name : 'No Role'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(user.status)}
+                          {getStatusBadge(user.is_active ? 'active' : 'inactive')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
@@ -576,34 +741,54 @@ const UserManagementList = () => {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Permission Name
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Scope
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {allPermissions.map((permission) => (
+            {isLoadingPermissions ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="mt-4 text-gray-500">Loading permissions...</p>
+              </div>
+            ) : permissionsError ? (
+              <div className="text-center py-12">
+                <div className="text-red-500">
+                  <p className="text-lg font-medium">Error Loading Permissions</p>
+                  <p className="mt-2">Failed to fetch permissions. Please try again.</p>
+                </div>
+              </div>
+            ) : allPermissions.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-500">
+                  <p className="text-lg font-medium">No Permissions Found</p>
+                  <p className="mt-2">Create your first permission to get started.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Permission Name
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Permission Key
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {allPermissions.map((permission) => (
                     <tr key={permission.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{permission.label}</div>
-                        <div className="text-sm text-gray-500">{permission.name}</div>
+                        <div className="text-sm font-medium text-gray-900">{permission.name}</div>
+                        <div className="text-sm text-gray-500">ID: {permission.id}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                          {permission.scope}
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {permission.key}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -630,6 +815,7 @@ const UserManagementList = () => {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         )}
       </div>
@@ -647,16 +833,30 @@ const UserManagementList = () => {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="roleTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                  Role Title
+                <label htmlFor="roleName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Role Name
                 </label>
                 <input
                   type="text"
-                  id="roleTitle"
-                  value={roleForm.title}
-                  onChange={(e) => setRoleForm({ ...roleForm, title: e.target.value })}
+                  id="roleName"
+                  value={roleForm.name}
+                  onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter role title"
+                  placeholder="e.g., team lead"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="roleDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  id="roleDescription"
+                  rows={3}
+                  value={roleForm.description}
+                  onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="e.g., team manager with limited permissions"
                 />
               </div>
 
@@ -666,12 +866,12 @@ const UserManagementList = () => {
                 </label>
                 <select
                   id="roleStatus"
-                  value={roleForm.status}
-                  onChange={(e) => setRoleForm({ ...roleForm, status: e.target.value })}
+                  value={roleForm.is_active}
+                  onChange={(e) => setRoleForm({ ...roleForm, is_active: e.target.value === 'true' })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value={true}>Active</option>
+                  <option value={false}>Inactive</option>
                 </select>
               </div>
             </div>
@@ -679,12 +879,92 @@ const UserManagementList = () => {
             <div className="flex justify-between space-x-3 mt-6">
               <button
                 onClick={handleAssignPermissions}
-                disabled={!roleForm.title.trim()}
+                disabled={!roleForm.name.trim() || !roleForm.description.trim()}
                 className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-primary-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 Assign Permissions
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Role Modal */}
+      {showEditRoleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">
+                {isLoadingRoleById ? 'Loading Role...' : 'Edit Role'}
+              </h3>
+              <button onClick={handleCancelRole} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {isLoadingRoleById ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="mt-2 text-gray-500">Loading role data...</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="editRoleName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Role Name
+                    </label>
+                    <input
+                      type="text"
+                      id="editRoleName"
+                      value={roleForm.name}
+                      onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., team lead"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editRoleDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      id="editRoleDescription"
+                      rows={3}
+                      value={roleForm.description}
+                      onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., team manager with limited permissions"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editRoleStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      id="editRoleStatus"
+                      value={roleForm.is_active}
+                      onChange={(e) => setRoleForm({ ...roleForm, is_active: e.target.value === 'true' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value={true}>Active</option>
+                      <option value={false}>Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-between space-x-3 mt-6">
+                  <button
+                    onClick={handleAssignPermissions}
+                    disabled={!roleForm.name.trim() || !roleForm.description.trim()}
+                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-primary-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                  >
+                    Update Permissions
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -710,15 +990,15 @@ const UserManagementList = () => {
                   onDrop={handleDropToAvailable}
                 >
                   <div className="space-y-2">
-                    {availablePermissions.map((permission) => (
+                    {currentAvailablePermissions.map((permission) => (
                       <div
                         key={permission.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, permission, 'available')}
                         className="bg-white p-3 rounded-md border border-gray-200 cursor-move hover:bg-gray-50 transition-colors"
                       >
-                        <span className="text-sm font-medium text-gray-900">{permission.label}</span>
-                        <p className="text-xs text-gray-500">{permission.name}</p>
+                        <span className="text-sm font-medium text-gray-900">{permission.name}</span>
+                        <p className="text-xs text-gray-500">{permission.key}</p>
                       </div>
                     ))}
                   </div>
@@ -741,8 +1021,8 @@ const UserManagementList = () => {
                         onDragStart={(e) => handleDragStart(e, permission, 'assigned')}
                         className="bg-white p-3 rounded-md border border-primary-200 cursor-move hover:bg-primary-50 transition-colors"
                       >
-                        <span className="text-sm font-medium text-gray-900">{permission.label}</span>
-                        <p className="text-xs text-gray-500">{permission.name}</p>
+                        <span className="text-sm font-medium text-gray-900">{permission.name}</span>
+                        <p className="text-xs text-gray-500">{permission.key}</p>
                       </div>
                     ))}
                     {assignedPermissions.length === 0 && (
@@ -761,11 +1041,11 @@ const UserManagementList = () => {
                 Cancel
               </button>
               <button
-                onClick={handleSaveRole}
+                onClick={editingRoleId ? handleSaveEditRole : handleSaveRole}
                 disabled={assignedPermissions.length === 0}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
-                Save Role
+                {editingRoleId ? 'Update Role' : 'Save Role'}
               </button>
             </div>
           </div>
@@ -1091,6 +1371,20 @@ const UserManagementList = () => {
 
             <div className="space-y-4">
               <div>
+                <label htmlFor="permissionKey" className="block text-sm font-medium text-gray-700 mb-1">
+                  Permission Key
+                </label>
+                <input
+                  type="text"
+                  id="permissionKey"
+                  value={permissionForm.key}
+                  onChange={(e) => setPermissionForm({ ...permissionForm, key: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="e.g., admin.users.view"
+                />
+              </div>
+
+              <div>
                 <label htmlFor="permissionName" className="block text-sm font-medium text-gray-700 mb-1">
                   Permission Name
                 </label>
@@ -1100,21 +1394,7 @@ const UserManagementList = () => {
                   value={permissionForm.name}
                   onChange={(e) => setPermissionForm({ ...permissionForm, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter permission name"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="permissionScope" className="block text-sm font-medium text-gray-700 mb-1">
-                  Permission Scope
-                </label>
-                <input
-                  type="text"
-                  id="permissionScope"
-                  value={permissionForm.scope}
-                  onChange={(e) => setPermissionForm({ ...permissionForm, scope: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter permission scope"
+                  placeholder="e.g., view Users"
                 />
               </div>
 
@@ -1142,7 +1422,7 @@ const UserManagementList = () => {
               </button>
               <button
                 onClick={handleSavePermission}
-                disabled={!permissionForm.name.trim() || !permissionForm.scope.trim() || !permissionForm.description.trim()}
+                disabled={!permissionForm.key.trim() || !permissionForm.name.trim() || !permissionForm.description.trim()}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 Save Permission

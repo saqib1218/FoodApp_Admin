@@ -1,53 +1,51 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { KitchenContext } from './index';
-import { kitchenAnalyticsService } from '../../../services/kitchens/kitchenAnalyticsService';
+import { useGetKitchenAnalyticsQuery, useGetKitchenStatsQuery } from '../../../store/api/modules/kitchens/kitchensApi';
 import PermissionGate from '../../../components/PermissionGate';
 import { useAuth } from '../../../context/useAuth';
 
 const KitchenAnalyticsTab = () => {
-  const { id: kitchenId } = useContext(KitchenContext);
+  const { kitchen } = useContext(KitchenContext);
+  const kitchenId = kitchen?.id;
   const { hasPermission } = useAuth();
-  
+
   // State variables
-  const [analytics, setAnalytics] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [dateRange, setDateRange] = useState('last30days');
-  const [topDishes, setTopDishes] = useState([]);
-  const [orderTrends, setOrderTrends] = useState([]);
-  const [revenueData, setRevenueData] = useState([]);
+  const [dateRange, setDateRange] = useState('month');
 
-  // Fetch kitchen analytics data
-  useEffect(() => {
-    const fetchAnalyticsData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch general analytics data
-        const analyticsData = await kitchenAnalyticsService.getKitchenAnalytics(kitchenId, dateRange);
-        setAnalytics(analyticsData);
-        
-        // Fetch top dishes
-        const topDishesData = await kitchenAnalyticsService.getTopDishes(kitchenId, dateRange);
-        setTopDishes(topDishesData);
-        
-        // Fetch order trends
-        const orderTrendsData = await kitchenAnalyticsService.getOrderTrends(kitchenId, dateRange);
-        setOrderTrends(orderTrendsData);
-        
-        // Fetch revenue data
-        const revenueData = await kitchenAnalyticsService.getRevenueData(kitchenId, dateRange);
-        setRevenueData(revenueData);
-      } catch (err) {
-        console.error('Failed to load kitchen analytics:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // RTK Query hooks
+  const {
+    data: analytics = {},
+    isLoading: isLoadingAnalytics,
+    error: analyticsError
+  } = useGetKitchenAnalyticsQuery({ 
+    kitchenId, 
+    period: dateRange 
+  }, {
+    skip: !kitchenId || !hasPermission('view_kitchen_analytics')
+  });
 
-    if (hasPermission('view_kitchen_analytics')) {
-      fetchAnalyticsData();
-    }
-  }, [kitchenId, dateRange, hasPermission]);
+  const {
+    data: kitchenStats = {},
+    isLoading: isLoadingStats,
+    error: statsError
+  } = useGetKitchenStatsQuery(kitchenId, {
+    skip: !kitchenId || !hasPermission('view_kitchen_analytics')
+  });
+
+  const isLoading = isLoadingAnalytics || isLoadingStats;
+
+  // Extract data from RTK Query responses
+  const topDishes = analytics?.topDishes || [];
+  const orderTrends = analytics?.orderTrends || [];
+  const revenueData = analytics?.revenueData || [];
+
+  if (!hasPermission('view_kitchen_analytics')) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">You don't have permission to view kitchen analytics.</p>
+      </div>
+    );
+  }
 
   // Handle date range change
   const handleDateRangeChange = (e) => {

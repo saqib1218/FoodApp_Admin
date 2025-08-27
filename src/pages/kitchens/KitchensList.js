@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import {
   MagnifyingGlassIcon,
@@ -10,7 +11,8 @@ import {
   ChevronUpIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
-import { kitchenService } from '../../services/kitchens/kitchenService';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import { mockKitchenService } from '../../utils/mockServiceHelpers';
 
 const KitchensList = () => {
   const [kitchens, setKitchens] = useState([]);
@@ -42,12 +44,12 @@ const KitchensList = () => {
       try {
         setIsLoading(true);
         // Fetch kitchens
-        const kitchensData = await kitchenService.getAllKitchens();
+        const kitchensData = await mockKitchenService.getAllKitchens();
         setKitchens(kitchensData);
         setFilteredKitchens(kitchensData);
         
         // Fetch filter options
-        const options = await kitchenService.getFilterOptions();
+        const options = await mockKitchenService.getFilterOptions();
         setFilterOptions(options);
       } catch (error) {
         console.error('Error fetching kitchens:', error);
@@ -64,7 +66,7 @@ const KitchensList = () => {
     const applyFilters = async () => {
       setIsLoading(true);
       try {
-        const filtered = await kitchenService.filterKitchens({
+        const filtered = await mockKitchenService.filterKitchens({
           searchTerm,
           city: filters.city,
           cuisine: filters.cuisine,

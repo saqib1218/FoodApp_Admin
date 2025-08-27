@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { kitchenDishService } from '../../services/kitchens/kitchenDishService';
+import { useGetDishByIdQuery, useUpdateDishMutation } from '../../store/api/modules/kitchens/kitchensApi';
 import { useAuth } from '../../context/useAuth';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
@@ -10,39 +10,28 @@ const KitchenDishDetailPage = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   
-  const [dish, setDish] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // RTK Query hooks
+  const {
+    data: dish,
+    isLoading,
+    error
+  } = useGetDishByIdQuery({ kitchenId, dishId }, {
+    skip: !kitchenId || !dishId
+  });
+
+  const [updateDish] = useUpdateDishMutation();
   const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const fetchDishDetail = async () => {
-      try {
-        setIsLoading(true);
-        const dishData = await kitchenDishService.getDishById(kitchenId, dishId);
-        setDish(dishData);
-      } catch (error) {
-        console.error('Error fetching dish details:', error);
-        setError('Failed to load dish details');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (kitchenId && dishId) {
-      fetchDishDetail();
-    }
-  }, [kitchenId, dishId]);
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await kitchenDishService.deleteDish(kitchenId, dishId);
+      // TODO: Replace with RTK Query delete mutation
+      console.warn("TODO: Replace with RTK Query delete mutation");
       navigate(`/kitchens/${kitchenId}?tab=dishes`);
     } catch (error) {
       console.error('Error deleting dish:', error);
-      setError('Failed to delete dish');
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);

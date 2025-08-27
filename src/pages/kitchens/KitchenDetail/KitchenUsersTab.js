@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { kitchenUserService } from '../../../services/kitchens/kitchenUserService';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import { mockKitchenUserService } from '../../../utils/mockServiceHelpers';
 import { useAuth } from '../../../context/useAuth';
 import { PermissionButton } from '../../../components/PermissionButton';
 import { KitchenContext } from './index';
@@ -36,7 +37,9 @@ const KitchenUsersTab = () => {
     const fetchKitchenUsers = async () => {
       try {
         setIsLoadingUsers(true);
-        const users = await kitchenUserService.getKitchenUsers(kitchenId);
+        // TODO: Replace with RTK Query
+        console.warn("TODO: Replace with RTK Query");
+        const users = [];
         setKitchenUsers(users);
       } catch (err) {
         console.error('Failed to load kitchen users:', err);
@@ -125,10 +128,13 @@ const KitchenUsersTab = () => {
 
     try {
       setIsLoadingUsers(true);
-      await kitchenUserService.updateUserStatus(selectedUser.id, newStatus, statusComment);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
       
       // Refresh users list
-      const users = await kitchenUserService.getKitchenUsers(kitchenId);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const users = [];
       setKitchenUsers(users);
       
       setShowStatusModal(false);
@@ -154,10 +160,13 @@ const KitchenUsersTab = () => {
 
     try {
       setIsLoadingUsers(true);
-      await kitchenUserService.unblockUserPin(selectedUser.id, statusComment);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
       
       // Refresh users list
-      const users = await kitchenUserService.getKitchenUsers(kitchenId);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const users = [];
       setKitchenUsers(users);
       
       setShowUnblockPinModal(false);
@@ -184,10 +193,13 @@ const KitchenUsersTab = () => {
 
     try {
       setIsLoadingUsers(true);
-      await kitchenUserService.deleteUserToken(selectedUser.id, selectedToken.id, statusComment);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
       
       // Refresh users list
-      const users = await kitchenUserService.getKitchenUsers(kitchenId);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const users = [];
       setKitchenUsers(users);
       
       setShowDeleteTokenModal(false);
@@ -205,7 +217,9 @@ const KitchenUsersTab = () => {
     
     try {
       setIsLoadingDocuments(true);
-      const documents = await kitchenUserService.getUserDocuments(user.id);
+      // TODO: Replace with RTK Query
+      console.warn("TODO: Replace with RTK Query");
+      const documents = [];
       setUserDocuments(documents);
     } catch (err) {
       console.error('Failed to load user documents:', err);
