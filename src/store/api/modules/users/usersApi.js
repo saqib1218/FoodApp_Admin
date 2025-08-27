@@ -30,7 +30,7 @@ export const usersApi = apiSlice.injectEndpoints({
     updateUser: builder.mutation({
       query: ({ id, ...userData }) => ({
         url: `/admin/users/${id}`,
-        method: 'PUT',
+        method: 'PATCH',
         body: userData,
       }),
       invalidatesTags: (result, error, arg) => [{ type: 'User', id: arg.id }],
@@ -67,12 +67,12 @@ export const usersApi = apiSlice.injectEndpoints({
     }),
     
     getRoleById: builder.query({
-      query: (roleId) => `/admin/roles/by-id/${roleId}`,
+      query: (roleId) => `/admin/roles/${roleId}`,
       providesTags: (result, error, roleId) => [{ type: 'Role', id: roleId }],
     }),
     
     getPermissionsByUserId: builder.query({
-      query: (userId) => `/admin/permissions/by-user/${userId}`,
+      query: (userId) => `/admin/users/${userId}/permissions`,
       providesTags: (result, error, userId) => [{ type: 'UserPermissions', id: userId }],
     }),
     

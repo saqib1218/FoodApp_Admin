@@ -4,6 +4,7 @@ import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, XMarkIcon, PlusIcon, PencilIcon
 import ConfirmationModal from '../../components/ConfirmationModal';
 import {
   useGetUsersQuery,
+  useGetUserByIdQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
@@ -56,13 +57,17 @@ const UserManagementList = () => {
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
+
+  // Get user by ID for editing
+  const { data: userByIdData, isLoading: isLoadingUserById } = useGetUserByIdQuery(editingUserId, {
+    skip: !editingUserId // Only fetch when editing a user
+  });
   const [userForm, setUserForm] = useState({
-    username: '',
+    name: '',
     email: '',
-    password: '',
     mobileNumber: '',
-    roleId: '',
-    status: 'active'
+    roleId: ''
   });
   const [passwordForm, setPasswordForm] = useState({
     newPassword: '',
@@ -215,22 +220,30 @@ const UserManagementList = () => {
 
   // User management handlers
   const handleCreateUser = () => {
-    setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+    setUserForm({ name: '', email: '', mobileNumber: '', roleId: '' });
+    refetchRoles(); // Refetch roles to get latest data
     setShowCreateUserModal(true);
   };
 
   const handleEditUser = (user) => {
-    setEditingUser(user);
-    setUserForm({
-      username: user.username,
-      email: user.email,
-      mobileNumber: user.mobileNumber || '',
-      roleId: user.roleId,
-      status: user.status,
-      password: '' // Don't populate password for editing
-    });
+    setEditingUserId(user.id);
+    refetchRoles(); // Refetch roles to get latest data
     setShowEditUserModal(true);
   };
+
+  // Populate form when user data is fetched for editing
+  useEffect(() => {
+    if (userByIdData?.data?.user && editingUserId) {
+      const userData = userByIdData.data.user;
+      setUserForm({
+        name: userData.name || '', // API uses 'name'
+        email: userData.email || '',
+        mobileNumber: userData.mobile_number || '', // Convert from API mobile_number to form mobileNumber
+        roleId: userData.roles && userData.roles.length > 0 ? userData.roles[0].role_id : '' // Get role_id from roles array
+      });
+      setEditingUser(userData);
+    }
+  }, [userByIdData, editingUserId]);
 
   const handleChangePassword = (user) => {
     setEditingUser(user);
@@ -242,29 +255,17 @@ const UserManagementList = () => {
   };
 
   const handleSaveUser = async () => {
-    if (userForm.username && userForm.email && userForm.password && userForm.roleId) {
-      const selectedRole = roles.find(role => role.id === parseInt(userForm.roleId));
-      const newUser = {
-        id: Date.now(),
-        username: userForm.username,
-        email: userForm.email,
-        mobileNumber: userForm.mobileNumber,
-        roleId: parseInt(userForm.roleId),
-        role: selectedRole,
-        status: userForm.status,
-        createdAt: new Date().toISOString()
-      };
+    if (userForm.name && userForm.email && userForm.roleId) {
       // Use RTK Query mutation to create user
       try {
         await createUser({
-          name: userForm.username,
+          name: userForm.name,
           email: userForm.email,
-          password: userForm.password,
-          mobile_number: userForm.mobileNumber,
-          role_id: parseInt(userForm.roleId)
+          mobileNumber: userForm.mobileNumber,
+          roleId: parseInt(userForm.roleId)
         }).unwrap();
         setShowCreateUserModal(false);
-        setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+        setUserForm({ name: '', email: '', mobileNumber: '', roleId: '' });
       } catch (error) {
         console.error('Failed to create user:', error);
       }
@@ -272,33 +273,20 @@ const UserManagementList = () => {
   };
 
   const handleUpdateUser = async () => {
-    if (userForm.username && userForm.email && userForm.roleId && editingUser) {
-      const selectedRole = roles.find(role => role.id === parseInt(userForm.roleId));
-      const updatedUsers = users.map(user => 
-        user.id === editingUser.id 
-          ? {
-              ...user,
-              username: userForm.username,
-              email: userForm.email,
-              mobileNumber: userForm.mobileNumber,
-              roleId: parseInt(userForm.roleId),
-              role: selectedRole,
-              status: userForm.status
-            }
-          : user
-      );
+    if (userForm.name && userForm.email && userForm.roleId && editingUser) {
       // Use RTK Query mutation to update user
       try {
         await updateUser({
           id: editingUser.id,
-          name: userForm.username,
+          name: userForm.name,
           email: userForm.email,
-          mobile_number: userForm.mobileNumber,
-          role_id: parseInt(userForm.roleId)
+          mobileNumber: userForm.mobileNumber,
+          roleId: parseInt(userForm.roleId)
         }).unwrap();
         setShowEditUserModal(false);
         setEditingUser(null);
-        setUserForm({ username: '', email: '', password: '', mobileNumber: '', roleId: '', status: 'active' });
+        setEditingUserId(null);
+        setUserForm({ name: '', email: '', mobileNumber: '', roleId: '' });
       } catch (error) {
         console.error('Failed to update user:', error);
       }
@@ -330,7 +318,10 @@ const UserManagementList = () => {
 
   const handleCancelUser = () => {
     setShowCreateUserModal(false);
-    setUserForm({ username: '', email: '', password: '', roleId: '', status: 'active' });
+    setShowEditUserModal(false);
+    setEditingUser(null);
+    setEditingUserId(null);
+    setUserForm({ name: '', email: '', mobileNumber: '', roleId: '' });
   };
 
   const handleDeleteUser = (userId) => {
@@ -1065,16 +1056,16 @@ const UserManagementList = () => {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                   User Name
                 </label>
                 <input
                   type="text"
-                  id="username"
-                  value={userForm.username}
-                  onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                  id="name"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter username"
+                  placeholder="Enter name"
                 />
               </div>
               <div>
@@ -1101,8 +1092,8 @@ const UserManagementList = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select a role</option>
-                  {roles.filter(role => role.status === 'active').map((role) => (
-                    <option key={role.id} value={role.id}>{role.title}</option>
+                  {roles.filter(role => role.is_active === true).map((role) => (
+                    <option key={role.id} value={role.id}>{role.name}</option>
                   ))}
                 </select>
               </div>
@@ -1121,47 +1112,7 @@ const UserManagementList = () => {
                 />
               </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    value={userForm.password}
-                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeSlashIcon className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
 
-              <div>
-                <label htmlFor="userStatus" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  id="userStatus"
-                  value={userForm.status}
-                  onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
@@ -1173,7 +1124,7 @@ const UserManagementList = () => {
               </button>
               <button
                 onClick={handleSaveUser}
-                disabled={!userForm.username.trim() || !userForm.email.trim() || !userForm.password.trim() || !userForm.roleId}
+                disabled={!userForm.name.trim() || !userForm.email.trim() || !userForm.roleId}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 Save User
@@ -1189,23 +1140,31 @@ const UserManagementList = () => {
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-neutral-900">Edit User</h3>
-              <button onClick={() => setShowEditUserModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={handleCancelUser} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
+            {/* Loading state while fetching user data */}
+            {isLoadingUserById ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                <span className="ml-2 text-gray-600">Loading user data...</span>
+              </div>
+            ) : (
+              <>
             <div className="space-y-4">
               <div>
-                <label htmlFor="editUsername" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="editName" className="block text-sm font-medium text-gray-700 mb-1">
                   User Name
                 </label>
                 <input
                   type="text"
-                  id="editUsername"
-                  value={userForm.username}
-                  onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                  id="editName"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter username"
+                  placeholder="Enter name"
                 />
               </div>
 
@@ -1248,45 +1207,34 @@ const UserManagementList = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select a role</option>
-                  {roles.map((role) => (
+                  {roles.filter(role => role.is_active === true).map((role) => (
                     <option key={role.id} value={role.id}>
-                      {role.title}
+                      {role.name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="editUserStatus" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  id="editUserStatus"
-                  value={userForm.status}
-                  onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
+
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
               <button
-                onClick={() => setShowEditUserModal(false)}
+                onClick={handleCancelUser}
                 className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdateUser}
-                disabled={!userForm.username.trim() || !userForm.email.trim() || !userForm.roleId}
+                disabled={!userForm.name.trim() || !userForm.email.trim() || !userForm.roleId}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 Update User
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}
