@@ -13,9 +13,8 @@ import {
   DocumentIcon
 } from '@heroicons/react/24/outline';
 import { useGetUserByIdQuery, useUpdateUserMutation, useGetUserActivityQuery } from '../../store/api/modules/users/usersApi';
-import PermissionButton from '../../components/PermissionButton';
-import PermissionGate from '../../components/PermissionGate';
-import usePermission from '../../hooks/usePermission';
+import PermissionGate, { PermissionButton } from '../../components/PermissionGate';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const UserDetail = () => {
   const { id } = useParams();
@@ -25,7 +24,7 @@ const UserDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isInfoExpanded, setIsInfoExpanded] = useState(true);
-  const { hasPermission } = usePermission();
+  const { hasPermission } = usePermissions();
   
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);

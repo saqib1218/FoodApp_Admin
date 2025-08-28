@@ -11,15 +11,7 @@ const decryptData = (encryptedData) => {
   }
 };
 
-const PermissionContext = createContext();
-
-export const usePermissions = () => {
-  const context = useContext(PermissionContext);
-  if (!context) {
-    throw new Error('usePermissions must be used within a PermissionProvider');
-  }
-  return context;
-};
+export const PermissionContext = createContext();
 
 export const PermissionProvider = ({ children }) => {
   const [userPermissions, setUserPermissions] = useState([]);
@@ -123,32 +115,27 @@ export const PermissionProvider = ({ children }) => {
     return permissionKeyArray.every(key => permissionKeys.includes(key));
   };
 
-  // Navigation permissions mapping
-  const navigationPermissions = {
-    dashboard: 'admin.dashboard.view',
-    users: 'admin.users.view',
-    kitchens: 'admin.kitchen.view',
-    partners: 'admin.partner.view',
-    customers: 'admin.customer.view',
-    orders: 'admin.order.view',
-    feedback: 'admin.feedback.view',
-    discounts: 'admin.discount.view',
-    reports: 'admin.reports.view',
-    settings: 'admin.setting.view',
-    engagement: 'admin.engagement.view'
-  };
-
-  // Get allowed navigation items
+  // Get allowed navigation items using PermissionRegistry
   const getAllowedNavigationItems = () => {
-    return Object.entries(navigationPermissions)
-      .filter(([key, permission]) => hasPermission(permission))
-      .map(([key]) => key);
+    try {
+      const { PermissionUtils } = require('./PermissionRegistry');
+      return PermissionUtils.getAccessibleNavigation(permissionKeys);
+    } catch (error) {
+      console.error('Error getting navigation items:', error);
+      return [];
+    }
   };
 
   // Check if user can access a specific route
   const canAccessRoute = (routeName) => {
-    const permission = navigationPermissions[routeName];
-    return permission ? hasPermission(permission) : false;
+    try {
+      const { PermissionUtils } = require('./PermissionRegistry');
+      const requiredPermissions = PermissionUtils.getRoutePermissions(routeName);
+      return requiredPermissions.length === 0 || hasAnyPermission(requiredPermissions);
+    } catch (error) {
+      console.error('Error checking route access:', error);
+      return false;
+    }
   };
 
   const value = {
@@ -161,7 +148,7 @@ export const PermissionProvider = ({ children }) => {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
-    navigationPermissions,
+
     getAllowedNavigationItems,
     canAccessRoute,
     refetchPermissions,

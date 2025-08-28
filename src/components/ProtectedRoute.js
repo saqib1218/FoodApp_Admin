@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { usePermissions } from '../contexts/PermissionContext';
+import { usePermissions } from '../hooks/usePermissions';
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -30,14 +30,13 @@ const ProtectedRoute = ({ permission, routeName, requireAll = false, children })
     hasPermission, 
     hasAllPermissions, 
     hasAnyPermission, 
-    canAccessRoute,
-    isPermissionsLoaded,
-    isLoadingPermissions 
+    navigation,
+    isPermissionsLoaded
   } = usePermissions();
   const location = useLocation();
 
   // Show loading spinner while checking authentication or permissions
-  if (isLoading || isLoadingPermissions || !isPermissionsLoaded) {
+  if (isLoading || !isPermissionsLoaded) {
     return <LoadingSpinner />;
   }
 
@@ -47,7 +46,7 @@ const ProtectedRoute = ({ permission, routeName, requireAll = false, children })
   }
 
   // Check route-based permission if routeName is provided
-  if (routeName && !canAccessRoute(routeName)) {
+  if (routeName && !navigation.canAccessRoute(routeName)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

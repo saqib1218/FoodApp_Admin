@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 // TODO: Replace with RTK Query hooks when migrating API calls
 import { mockKitchenUserService } from '../../../utils/mockServiceHelpers';
-import { useAuth } from '../../../context/useAuth';
-import { PermissionButton } from '../../../components/PermissionButton';
+import { useAuth } from '../../../hooks/useAuth';
+import { PermissionButton } from '../../../components/PermissionGate';
 import { KitchenContext } from './index';
 import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 

@@ -4,8 +4,8 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
 // TODO: Replace with RTK Query hooks when migrating API calls
 import { mockKitchenService } from '../../../utils/mockServiceHelpers';
-import { useAuth } from '../../../context/useAuth';
-import { PermissionGate } from '../../../components/PermissionGate';
+import { useAuth } from '../../../hooks/useAuth';
+import PermissionGate from '../../../components/PermissionGate';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
 // Import tab components

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { KitchenContext } from './index';
 import { useGetKitchenAnalyticsQuery, useGetKitchenStatsQuery } from '../../../store/api/modules/kitchens/kitchensApi';
 import PermissionGate from '../../../components/PermissionGate';
-import { useAuth } from '../../../context/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 
 const KitchenAnalyticsTab = () => {
   const { kitchen } = useContext(KitchenContext);

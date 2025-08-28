@@ -16,10 +16,58 @@ import {
   useGetPermissionsQuery,
   useCreatePermissionMutation
 } from '../../store/api/modules/users/usersApi';
+import { usePermissions } from '../../hooks/usePermissions';
+import { PERMISSIONS } from '../../contexts/PermissionRegistry';
 
 const UserManagementList = () => {
   const [activeTab, setActiveTab] = useState('role');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Permission hooks
+  const { hasPermission } = usePermissions();
+  
+  // Check permissions for different sections
+  const canViewRoles = hasPermission(PERMISSIONS.ROLE_LIST_VIEW);
+  const canCreateRole = hasPermission(PERMISSIONS.ROLE_CREATE);
+  const canEditRole = hasPermission(PERMISSIONS.ROLE_EDIT);
+  const canDeleteRole = hasPermission(PERMISSIONS.ROLE_DELETE);
+  
+  const canViewUsers = hasPermission(PERMISSIONS.USER_LIST_VIEW);
+  const canCreateUser = hasPermission(PERMISSIONS.USER_CREATE);
+  const canEditUser = hasPermission(PERMISSIONS.USER_EDIT);
+  const canDeleteUser = hasPermission(PERMISSIONS.USER_DELETE);
+  
+  const canViewPermissions = hasPermission(PERMISSIONS.PERMISSION_LIST_VIEW);
+  const canCreatePermission = hasPermission(PERMISSIONS.PERMISSION_CREATE);
+  const canEditPermission = hasPermission(PERMISSIONS.PERMISSION_EDIT);
+  const canDeletePermission = hasPermission(PERMISSIONS.PERMISSION_DELETE);
+
+  // Auto-select the first available tab based on permissions
+  React.useEffect(() => {
+    if (canViewRoles && activeTab === 'role') {
+      // Role tab is already selected and user has permission
+      return;
+    } else if (canViewUsers && (activeTab === 'user' || !canViewRoles)) {
+      // User tab is selected or role tab is not available
+      if (activeTab !== 'user') {
+        setActiveTab('user');
+      }
+      return;
+    } else if (canViewPermissions && (activeTab === 'permissions' || (!canViewRoles && !canViewUsers))) {
+      // Permission tab is selected or other tabs are not available
+      if (activeTab !== 'permissions') {
+        setActiveTab('permissions');
+      }
+      return;
+    } else if (!canViewRoles && activeTab === 'role') {
+      // Current tab is role but user doesn't have permission
+      if (canViewUsers) {
+        setActiveTab('user');
+      } else if (canViewPermissions) {
+        setActiveTab('permissions');
+      }
+    }
+  }, [canViewRoles, canViewUsers, canViewPermissions, activeTab]);
 
   // State declarations first
   const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
@@ -38,7 +86,7 @@ const UserManagementList = () => {
   const [roleForm, setRoleForm] = useState({
     name: '',
     description: '',
-    is_active: true
+    isActive: true
   });
 
   // User management state - RTK Query
@@ -121,7 +169,7 @@ const UserManagementList = () => {
 
   // Handle role creation
   const handleCreateRole = () => {
-    setRoleForm({ name: '', description: '', is_active: true });
+    setRoleForm({ name: '', description: '', isActive: true });
     setAssignedPermissions([]);
     setShowCreateRoleModal(true);
   };
@@ -139,7 +187,7 @@ const UserManagementList = () => {
       setRoleForm({
         name: roleData.name,
         description: roleData.description,
-        is_active: roleData.is_active
+        isActive: roleData.isActive
       });
       
       // Set assigned permissions based on permissions array from API
@@ -165,12 +213,12 @@ const UserManagementList = () => {
         await createRole({
           name: roleForm.name,
           description: roleForm.description,
-          is_active: roleForm.is_active,
+          isActive: roleForm.isActive,
           permissionIds: assignedPermissions.map(p => p.id)
         }).unwrap();
         setShowCreateRoleModal(false);
         setShowAssignPermissionsModal(false);
-        setRoleForm({ name: '', description: '', is_active: true });
+        setRoleForm({ name: '', description: '', isActive: true });
         setAssignedPermissions([]);
       } catch (error) {
         console.error('Failed to create role:', error);
@@ -187,12 +235,12 @@ const UserManagementList = () => {
           id: editingRoleId,
           name: roleForm.name,
           description: roleForm.description,
-          is_active: roleForm.is_active,
+          isActive: roleForm.isActive,
           permissionIds: assignedPermissions.map(p => p.id)
         }).unwrap();
         setShowEditRoleModal(false);
         setShowAssignPermissionsModal(false);
-        setRoleForm({ name: '', description: '', is_active: true });
+        setRoleForm({ name: '', description: '', isActive: true });
         setAssignedPermissions([]);
         setEditingRoleId(null);
       } catch (error) {
@@ -205,7 +253,7 @@ const UserManagementList = () => {
     setShowCreateRoleModal(false);
     setShowEditRoleModal(false);
     setShowAssignPermissionsModal(false);
-    setRoleForm({ name: '', description: '', is_active: true });
+    setRoleForm({ name: '', description: '', isActive: true });
     setAssignedPermissions([]);
     setEditingRoleId(null);
   };
@@ -238,8 +286,8 @@ const UserManagementList = () => {
       setUserForm({
         name: userData.name || '', // API uses 'name'
         email: userData.email || '',
-        mobileNumber: userData.mobile_number || '', // Convert from API mobile_number to form mobileNumber
-        roleId: userData.roles && userData.roles.length > 0 ? userData.roles[0].role_id : '' // Get role_id from roles array
+        mobileNumber: userData.mobileNumber || '', // API now uses 'mobileNumber'
+        roleId: userData.roles && userData.roles.length > 0 ? userData.roles[0].roleId : '' // Get roleId from roles array
       });
       setEditingUser(userData);
     }
@@ -327,7 +375,7 @@ const UserManagementList = () => {
   const handleDeleteUser = (userId) => {
     const user = users.find(u => u.id === userId);
     setConfirmationAction('delete_user');
-    setPendingAction({ userId, userName: user.username });
+    setPendingAction({ userId, userName: user.name });
     setShowConfirmationModal(true);
     setConfirmationComment('');
   };
@@ -467,54 +515,62 @@ const UserManagementList = () => {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={handleRoleTabClick}
-            className={`${
-              activeTab === 'role'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Role
-          </button>
-          <button
-            onClick={handleUserTabClick}
-            className={`${
-              activeTab === 'user'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Users
-          </button>
-          <button
-            onClick={handlePermissionsTabClick}
-            className={`${
-              activeTab === 'permissions'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Permissions
-          </button>
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          {canViewRoles && (
+            <button
+              onClick={handleRoleTabClick}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'role'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Role
+            </button>
+          )}
+          {canViewUsers && (
+            <button
+              onClick={handleUserTabClick}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'user'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Users
+            </button>
+          )}
+          {canViewPermissions && (
+            <button
+              onClick={handlePermissionsTabClick}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'permissions'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Permissions
+            </button>
+          )}
         </nav>
       </div>
 
       {/* Tab Content */}
       <div className="bg-white shadow rounded-lg">
-        {activeTab === 'role' && (
+        {activeTab === 'role' && canViewRoles && (
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-medium text-gray-900">Role Management</h2>
-              <button
-                onClick={handleCreateRole}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
-                Create Role
-              </button>
+              {canCreateRole && (
+                <button
+                  onClick={() => setShowCreateRoleModal(true)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
+                  Create Role
+                </button>
+              )}
             </div>
 
             {isLoadingRoles ? (
@@ -564,7 +620,7 @@ const UserManagementList = () => {
                           <div className="text-xs text-gray-400">Created {new Date(role.created_at).toLocaleDateString()}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(role.is_active ? 'active' : 'inactive')}
+                          {getStatusBadge(role.isActive ? 'active' : 'inactive')}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
@@ -588,20 +644,24 @@ const UserManagementList = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
-                            <button 
-                              onClick={() => handleEditRole(role)}
-                              className="text-blue-600 hover:text-blue-900 transition-colors" 
-                              title="Edit role"
-                            >
-                              <PencilIcon className="h-4 w-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteRole(role.id)}
-                              className="text-red-600 hover:text-red-900 transition-colors" 
-                              title="Delete role"
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
+                            {canEditRole && (
+                              <button 
+                                onClick={() => handleEditRole(role)}
+                                className="text-blue-600 hover:text-blue-900 transition-colors" 
+                                title="Edit role"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            )}
+                            {canDeleteRole && (
+                              <button 
+                                onClick={() => handleDeleteRole(role.id)}
+                                className="text-red-600 hover:text-red-900 transition-colors" 
+                                title="Delete role"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -613,17 +673,19 @@ const UserManagementList = () => {
           </div>
         )}
 
-        {activeTab === 'user' && (
+        {activeTab === 'user' && canViewUsers && (
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-medium text-gray-900">User Management</h2>
-              <button
-                onClick={handleCreateUser}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
-                Create User
-              </button>
+              {canCreateUser && (
+                <button
+                  onClick={handleCreateUser}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
+                  Create User
+                </button>
+              )}
             </div>
 
             {isLoadingUsers ? (
@@ -672,42 +734,48 @@ const UserManagementList = () => {
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                          <div className="text-sm text-gray-500">{user.mobile_number || 'No mobile'}</div>
+                          <div className="text-sm text-gray-500">{user.mobileNumber || 'No mobile'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{user.email}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            {user.roles && user.roles.length > 0 ? user.roles[0].role_name : 'No Role'}
+                            {user.roles && user.roles.length > 0 ? user.roles[0].roleName : 'No Role'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(user.is_active ? 'active' : 'inactive')}
+                          {getStatusBadge(user.isActive ? 'active' : 'inactive')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
-                            <button 
-                              onClick={() => handleEditUser(user)}
-                              className="text-blue-600 hover:text-blue-900 transition-colors" 
-                              title="Edit user"
-                            >
-                              <PencilIcon className="h-4 w-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleChangePassword(user)}
-                              className="text-yellow-600 hover:text-yellow-900 transition-colors" 
-                              title="Change password"
-                            >
-                              <KeyIcon className="h-4 w-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-red-600 hover:text-red-900 transition-colors" 
-                              title="Delete user"
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
+                            {canEditUser && (
+                              <button 
+                                onClick={() => handleEditUser(user)}
+                                className="text-blue-600 hover:text-blue-900 transition-colors" 
+                                title="Edit user"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            )}
+                            {canEditUser && (
+                              <button 
+                                onClick={() => handleChangePassword(user)}
+                                className="text-yellow-600 hover:text-yellow-900 transition-colors" 
+                                title="Change password"
+                              >
+                                <KeyIcon className="h-4 w-4" />
+                              </button>
+                            )}
+                            {canDeleteUser && (
+                              <button 
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="text-red-600 hover:text-red-900 transition-colors" 
+                                title="Delete user"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -719,17 +787,19 @@ const UserManagementList = () => {
           </div>
         )}
 
-        {activeTab === 'permissions' && (
+        {activeTab === 'permissions' && canViewPermissions && (
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-medium text-gray-900">Permission Management</h2>
-              <button
-                onClick={handleCreatePermission}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
-                Create Permission
-              </button>
+              {canCreatePermission && (
+                <button
+                  onClick={handleCreatePermission}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
+                  Create Permission
+                </button>
+              )}
             </div>
 
             {isLoadingPermissions ? (
@@ -789,16 +859,20 @@ const UserManagementList = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-3">
-                          <button className="text-blue-600 hover:text-blue-900 transition-colors" title="Edit permission">
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeletePermission(permission.id)}
-                            className="text-red-600 hover:text-red-900 transition-colors" 
-                            title="Delete permission"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
+                          {canEditPermission && (
+                            <button className="text-blue-600 hover:text-blue-900 transition-colors" title="Edit permission">
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                          {canDeletePermission && (
+                            <button 
+                              onClick={() => handleDeletePermission(permission.id)}
+                              className="text-red-600 hover:text-red-900 transition-colors" 
+                              title="Delete permission"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -857,8 +931,8 @@ const UserManagementList = () => {
                 </label>
                 <select
                   id="roleStatus"
-                  value={roleForm.is_active}
-                  onChange={(e) => setRoleForm({ ...roleForm, is_active: e.target.value === 'true' })}
+                  value={roleForm.isActive}
+                  onChange={(e) => setRoleForm({ ...roleForm, isActive: e.target.value === 'true' })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value={true}>Active</option>
@@ -935,8 +1009,8 @@ const UserManagementList = () => {
                     </label>
                     <select
                       id="editRoleStatus"
-                      value={roleForm.is_active}
-                      onChange={(e) => setRoleForm({ ...roleForm, is_active: e.target.value === 'true' })}
+                      value={roleForm.isActive}
+                      onChange={(e) => setRoleForm({ ...roleForm, isActive: e.target.value === 'true' })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     >
                       <option value={true}>Active</option>
@@ -963,20 +1037,23 @@ const UserManagementList = () => {
       {/* Assign Permissions Modal */}
       {showAssignPermissionsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-lg font-medium text-neutral-900">Assign Permissions</h3>
               <button onClick={handleCancelRole} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Modal Content */}
+            <div className="flex-1 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[300px]">
               {/* Available Permissions */}
-              <div>
+              <div className="flex flex-col">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Available Permissions</h4>
                 <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 min-h-[300px] bg-gray-50"
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 h-[300px] overflow-y-auto"
                   onDragOver={handleDragOver}
                   onDrop={handleDropToAvailable}
                 >
@@ -997,10 +1074,10 @@ const UserManagementList = () => {
               </div>
 
               {/* Assigned Permissions */}
-              <div>
+              <div className="flex flex-col">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Assigned Permissions</h4>
                 <div
-                  className="border-2 border-dashed border-primary-300 rounded-lg p-4 min-h-[300px] bg-primary-50"
+                  className="border-2 border-dashed border-primary-300 rounded-lg p-4 bg-primary-50 h-[300px] overflow-y-auto"
                   onDragOver={handleDragOver}
                   onDrop={handleDropToAssigned}
                 >
@@ -1022,9 +1099,11 @@ const UserManagementList = () => {
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
-            <div className="flex justify-end space-x-3 mt-6">
+            {/* Modal Footer */}
+            <div className="flex justify-end space-x-3 p-6 pt-4 border-t border-gray-200 flex-shrink-0">
               <button
                 onClick={handleCancelRole}
                 className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
@@ -1092,7 +1171,7 @@ const UserManagementList = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select a role</option>
-                  {roles.filter(role => role.is_active === true).map((role) => (
+                  {roles.filter(role => role.isActive === true).map((role) => (
                     <option key={role.id} value={role.id}>{role.name}</option>
                   ))}
                 </select>
@@ -1207,7 +1286,7 @@ const UserManagementList = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select a role</option>
-                  {roles.filter(role => role.is_active === true).map((role) => (
+                  {roles.filter(role => role.isActive === true).map((role) => (
                     <option key={role.id} value={role.id}>
                       {role.name}
                     </option>
@@ -1252,7 +1331,7 @@ const UserManagementList = () => {
 
             <div className="mb-4">
               <p className="text-sm text-gray-600">
-                Changing password for: <span className="font-medium">{editingUser?.username}</span>
+                Changing password for: <span className="font-medium">{editingUser?.name}</span>
               </p>
             </div>
 

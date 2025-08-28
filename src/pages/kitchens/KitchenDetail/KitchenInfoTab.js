@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 import { KitchenContext } from './index';
-import { useAuth } from '../../../context/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 import PermissionGate from '../../../components/PermissionGate';
 
 const KitchenInfoTab = () => {

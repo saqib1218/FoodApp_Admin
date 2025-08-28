@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import PermissionButton from '../components/PermissionButton';
-import PermissionGate from '../components/PermissionGate';
-import usePermission from '../hooks/usePermission';
+import PermissionGate, { PermissionButton } from '../components/PermissionGate';
+import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../hooks/useAuth';
 
 const PermissionsDemo = () => {
-  const { hasPermission, filterByPermission } = usePermission();
+  const { hasPermission, utils } = usePermissions();
   const { userPermissions, hasRole } = useAuth();
   const [selectedPermission, setSelectedPermission] = useState('');
 
@@ -21,7 +20,9 @@ const PermissionsDemo = () => {
   ];
 
   // Filter items based on current permissions
-  const filteredItems = filterByPermission(demoItems, 'permission');
+  const filteredItems = demoItems.filter(item => {
+    return item.permission ? hasPermission(item.permission) : true;
+  });
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">

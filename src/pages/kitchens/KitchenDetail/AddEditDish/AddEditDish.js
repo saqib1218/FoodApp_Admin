@@ -1,7 +1,7 @@
 import React,{useState} from 'react'
 import { XMarkIcon, PencilIcon, EyeIcon,PlusIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useParams, useNavigate } from 'react-router-dom';
-import PermissionButton from '../../../../components/PermissionButton';
+import { PermissionButton } from '../../../../components/PermissionGate';
 import {currency} from '../../../../data/Currency/currency'
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 const AddEditDish = () => {

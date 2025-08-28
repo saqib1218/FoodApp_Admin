@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
-import { PermissionsContext } from './context/PermissionsContext';
 import { PermissionProvider } from './contexts/PermissionContext';
 
 // Layouts
@@ -58,7 +57,7 @@ function App() {
   
   return (
     <PermissionProvider>
-      <PermissionsContext.Provider value={userPermissions}>
+        {/* PermissionsContext removed - using PermissionProvider instead */}
         <Routes>
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
@@ -201,7 +200,6 @@ function App() {
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </PermissionsContext.Provider>
     </PermissionProvider>
   );
 }

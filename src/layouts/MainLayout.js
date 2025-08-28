@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { usePermissions as useOldPermissions } from '../context/PermissionsContext';
-import { usePermissions } from '../contexts/PermissionContext';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   Bars3Icon,
   XMarkIcon,
@@ -29,8 +28,7 @@ const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showActionButtons, setShowActionButtons] = useState(false);
   const { currentUser, logout } = useAuth();
-  const oldPermissions = useOldPermissions();
-  const { hasPermission, isPermissionsLoaded } = usePermissions();
+  const { hasPermission, isPermissionsLoaded, navigation: permissionNavigation } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
 

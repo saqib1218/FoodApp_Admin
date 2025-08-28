@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { PencilIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useGetKitchenAddressesQuery, useAddKitchenAddressMutation, useUpdateKitchenAddressMutation, useDeleteKitchenAddressMutation } from '../../../store/api/modules/kitchens/kitchensApi';
-import { useAuth } from '../../../context/useAuth';
-import { PermissionButton } from '../../../components/PermissionButton';
+import { useAuth } from '../../../hooks/useAuth';
+import { PermissionButton } from '../../../components/PermissionGate';
 import { KitchenContext } from './index';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 

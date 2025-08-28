@@ -2,10 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { XMarkIcon, PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 // TODO: Replace with RTK Query hooks when migrating API calls
 import { mockKitchenAvailabilityService } from '../../../utils/mockServiceHelpers';
-import { useAuth } from '../../../context/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 import { KitchenContext } from './index';
-import PermissionButton from '../../../components/PermissionButton';
-import PermissionGate from '../../../components/PermissionGate';
+import PermissionGate, { PermissionButton } from '../../../components/PermissionGate';
 
 const KitchenAvailabilityTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);

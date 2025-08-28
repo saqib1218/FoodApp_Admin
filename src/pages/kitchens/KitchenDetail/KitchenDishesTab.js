@@ -3,9 +3,9 @@ import { XMarkIcon, PencilIcon, EyeIcon, PlusIcon, MagnifyingGlassIcon, FunnelIc
 import { useParams, useNavigate } from 'react-router-dom';
 // TODO: Replace with RTK Query hooks when migrating API calls
 import { mockKitchenDishService } from '../../../utils/mockServiceHelpers';
-import { useAuth } from '../../../context/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 import { KitchenContext } from './index';
-import PermissionButton from '../../../components/PermissionButton';
+import { PermissionButton } from '../../../components/PermissionGate';
 
 
 const KitchenDishesTab = () => {

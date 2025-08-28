@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { KitchenContext } from './index';
-import { useAuth } from '../../../context/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 import PermissionGate from '../../../components/PermissionGate';
 
 // This is a placeholder component for the Kitchen Orders tab

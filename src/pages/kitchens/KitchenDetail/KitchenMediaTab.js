@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { useAuth } from '../../../context/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 // TODO: Replace with RTK Query hooks when migrating API calls
 import { mockKitchenMediaService } from '../../../utils/mockServiceHelpers';
 import { KitchenContext } from './index';
-import PermissionButton from '../../../components/PermissionButton';
+import { PermissionButton } from '../../../components/PermissionGate';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const KitchenMediaTab = () => {
