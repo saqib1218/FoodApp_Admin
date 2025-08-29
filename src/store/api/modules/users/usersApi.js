@@ -20,7 +20,7 @@ export const usersApi = apiSlice.injectEndpoints({
     
     createUser: builder.mutation({
       query: (userData) => ({
-        url: '/admin/users',
+        url: '/admin/users/create',
         method: 'POST',
         body: userData,
       }),
@@ -40,6 +40,15 @@ export const usersApi = apiSlice.injectEndpoints({
       query: (userId) => ({
         url: `/admin/users/${userId}`,
         method: 'DELETE',
+      }),
+      invalidatesTags: ['User'],
+    }),
+
+    updateUserStatus: builder.mutation({
+      query: ({ userId, isActive }) => ({
+        url: `/admin/users/${userId}/status`,
+        method: 'PATCH',
+        body: { isActive },
       }),
       invalidatesTags: ['User'],
     }),
@@ -166,6 +175,7 @@ export const {
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
+  useUpdateUserStatusMutation,
   useActivateUserMutation,
   useDeactivateUserMutation,
   useGetRolesQuery,

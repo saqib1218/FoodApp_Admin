@@ -8,6 +8,7 @@ import {
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
+  useUpdateUserStatusMutation,
   useGetRolesQuery,
   useGetRoleByIdQuery,
   useCreateRoleMutation,
@@ -97,6 +98,7 @@ const UserManagementList = () => {
   const [createUser] = useCreateUserMutation();
   const [updateUser] = useUpdateUserMutation();
   const [deleteUser] = useDeleteUserMutation();
+  const [updateUserStatus] = useUpdateUserStatusMutation();
   const [createRole] = useCreateRoleMutation();
   const [updateRole] = useUpdateRoleMutation();
   const [deleteRole] = useDeleteRoleMutation();
@@ -378,6 +380,18 @@ const UserManagementList = () => {
     setPendingAction({ userId, userName: user.name });
     setShowConfirmationModal(true);
     setConfirmationComment('');
+  };
+
+  const handleToggleUserStatus = async (userId, currentStatus) => {
+    try {
+      await updateUserStatus({
+        userId: userId,
+        isActive: !currentStatus
+      }).unwrap();
+    } catch (error) {
+      console.error('Failed to update user status:', error);
+      alert('Failed to update user status. Please try again.');
+    }
   };
 
   // Permission management handlers
@@ -725,6 +739,9 @@ const UserManagementList = () => {
                         Status
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status Change
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -746,6 +763,62 @@ const UserManagementList = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(user.isActive ? 'active' : 'inactive')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {(() => {
+                            const canActivate = hasPermission(PERMISSIONS.USER_ACTIVATE);
+                            const canDeactivate = hasPermission(PERMISSIONS.USER_DEACTIVATE);
+                            
+                            // Show toggle if user has both permissions (can activate and deactivate)
+                            if (canActivate && canDeactivate) {
+                              return (
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={user.isActive}
+                                    onChange={() => handleToggleUserStatus(user.id, user.isActive)}
+                                  />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                </label>
+                              );
+                            }
+                            
+                            // Show toggle only for inactive users if user can only activate
+                            if (canActivate && !canDeactivate && !user.isActive) {
+                              return (
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={user.isActive}
+                                    onChange={() => handleToggleUserStatus(user.id, user.isActive)}
+                                  />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                </label>
+                              );
+                            }
+                            
+                            // Show toggle only for active users if user can only deactivate
+                            if (!canActivate && canDeactivate && user.isActive) {
+                              return (
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={user.isActive}
+                                    onChange={() => handleToggleUserStatus(user.id, user.isActive)}
+                                  />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                </label>
+                              );
+                            }
+                            
+                            // Show nothing if user has no permissions or toggle is not applicable
+                            return (
+                              <span className="text-gray-400 text-sm">No permission</span>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
@@ -1152,12 +1225,12 @@ const UserManagementList = () => {
                   Mobile Number
                 </label>
                 <input
-                  type="number"
+                  type="tel"
                   id="mobileNumber"
                   value={userForm.mobileNumber}
                   onChange={(e) => setUserForm({ ...userForm, mobileNumber: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter mobile number"
+                  placeholder="Enter mobile number (e.g., +923403118722)"
                 />
               </div>
               <div>
