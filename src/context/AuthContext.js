@@ -159,7 +159,7 @@ export const AuthProvider = ({ children }) => {
       console.log('Login API Response:', response.data);
       
       // Extract access token from the API response
-      const { access_token: accessToken } = response.data.data;
+      const { accessToken } = response.data.data;
       
       // Decode the JWT access token to get user information
       const decodedToken = jwtDecode(accessToken);
@@ -177,9 +177,9 @@ export const AuthProvider = ({ children }) => {
         id: decodedToken.userId,
         name: decodedToken.name,
         email: decodedToken.email,
-        phone: decodedToken.phone,
+        mobileNumber: decodedToken.mobileNumber,
         role: decodedToken.role,
-        is_active: decodedToken.is_active,
+        isActive: decodedToken.isActive,
         permissions: decodedToken.permissions || [] // Add permissions if they exist in JWT
       };
       TokenStorage.setUserInfo(userInfo);
@@ -288,9 +288,9 @@ export const AuthProvider = ({ children }) => {
             id: decodedToken.userId,
             name: decodedToken.name,
             email: decodedToken.email,
-            phone: decodedToken.phone,
+            mobileNumber: decodedToken.mobileNumber,
             role: decodedToken.role,
-            is_active: decodedToken.is_active,
+            isActive: decodedToken.isActive,
             permissions: decodedToken.permissions || []
           };
           

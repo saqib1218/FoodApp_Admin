@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 // TODO: Replace with RTK Query hooks when migrating API calls
-import { mockKitchenUserService } from '../../../utils/mockServiceHelpers';
+import { mockKitchenUsers } from '../../../data/kitchens/mockKitchenUsers';
 import { useAuth } from '../../../hooks/useAuth';
 import { PermissionButton } from '../../../components/PermissionGate';
 import { KitchenContext } from './index';
@@ -34,13 +34,12 @@ const KitchenUsersTab = () => {
 
   // Fetch kitchen users
   useEffect(() => {
-    const fetchKitchenUsers = async () => {
+    const fetchKitchenUsers = () => {
       try {
         setIsLoadingUsers(true);
-        // TODO: Replace with RTK Query
-        console.warn("TODO: Replace with RTK Query");
-        const users = [];
-        setKitchenUsers(users);
+        // Filter users for current kitchen
+        const filteredUsers = mockKitchenUsers.filter(user => user.kitchenId === parseInt(kitchenId));
+        setKitchenUsers(filteredUsers);
       } catch (err) {
         console.error('Failed to load kitchen users:', err);
       } finally {
@@ -345,7 +344,7 @@ const KitchenUsersTab = () => {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-neutral-900">{user.name}</div>
-                        <div className="text-sm text-neutral-500">{user.phone || user.email}</div>
+                        <div className="text-sm text-neutral-500">{user.mobileNumber || user.email}</div>
                       </div>
                     </div>
                   </td>

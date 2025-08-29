@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { PencilIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { useGetKitchenAddressesQuery, useAddKitchenAddressMutation, useUpdateKitchenAddressMutation, useDeleteKitchenAddressMutation } from '../../../store/api/modules/kitchens/kitchensApi';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import kitchenAddresses from '../../../data/kitchens/kitchenAddresses';
 import { useAuth } from '../../../hooks/useAuth';
 import { PermissionButton } from '../../../components/PermissionGate';
 import { KitchenContext } from './index';
@@ -27,18 +28,20 @@ const KitchenAddressesTab = () => {
     type: 'primary'
   });
 
-  // RTK Query hooks
-  const {
-    data: kitchenAddresses = [],
-    isLoading: isLoadingAddresses,
-    error: addressesError
-  } = useGetKitchenAddressesQuery(kitchenId, {
-    skip: !kitchenId || !hasPermission('view_kitchen_addresses')
-  });
+  // State for addresses data
+  const [addresses, setAddresses] = useState([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
 
-  const [addKitchenAddress] = useAddKitchenAddressMutation();
-  const [updateKitchenAddress] = useUpdateKitchenAddressMutation();
-  const [deleteKitchenAddress] = useDeleteKitchenAddressMutation();
+  // Load addresses data on component mount
+  useEffect(() => {
+    if (kitchenId) {
+      setIsLoadingAddresses(true);
+      // Filter addresses for current kitchen
+      const filteredAddresses = kitchenAddresses.filter(addr => addr.kitchenId === kitchenId.toString());
+      setAddresses(filteredAddresses);
+      setIsLoadingAddresses(false);
+    }
+  }, [kitchenId]);
 
   // Handle add address
   const handleAddAddress = () => {
@@ -104,21 +107,38 @@ const KitchenAddressesTab = () => {
   };
 
   // Confirm address action
-  const confirmAddressAction = async () => {
+  const confirmAddressAction = () => {
     try {
       if (modalAction === 'add') {
-        // Add new address using RTK Query mutation
-        await addKitchenAddress({
-          kitchenId,
-          addressData: addressForm
-        }).unwrap();
+        // Add new address to local state (mock implementation)
+        const newAddress = {
+          id: `addr-${Date.now()}`,
+          kitchenId: kitchenId.toString(),
+          fullAddress: addressForm.fullAddress,
+          cityZone: addressForm.cityZone,
+          googleMapLink: addressForm.googleMapLink,
+          nearestLocation: addressForm.nearestLocation,
+          deliveryInstructions: addressForm.deliveryInstructions,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setAddresses([...addresses, newAddress]);
       } else {
-        // Update existing address using RTK Query mutation
-        await updateKitchenAddress({
-          kitchenId,
-          addressId: selectedAddress.id,
-          addressData: addressForm
-        }).unwrap();
+        // Update existing address in local state (mock implementation)
+        const updatedAddresses = addresses.map(addr => 
+          addr.id === selectedAddress.id 
+            ? { 
+                ...addr, 
+                fullAddress: addressForm.fullAddress,
+                cityZone: addressForm.cityZone,
+                googleMapLink: addressForm.googleMapLink,
+                nearestLocation: addressForm.nearestLocation,
+                deliveryInstructions: addressForm.deliveryInstructions,
+                updatedAt: new Date().toISOString()
+              }
+            : addr
+        );
+        setAddresses(updatedAddresses);
       }
       
       setShowConfirmModal(false);

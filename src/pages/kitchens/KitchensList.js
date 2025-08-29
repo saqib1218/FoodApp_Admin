@@ -12,7 +12,7 @@ import {
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
 // TODO: Replace with RTK Query hooks when migrating API calls
-import { mockKitchenService } from '../../utils/mockServiceHelpers';
+import { mockKitchens } from '../../data/kitchens/mockKitchens';
 
 const KitchensList = () => {
   const [kitchens, setKitchens] = useState([]);
@@ -38,43 +38,91 @@ const KitchensList = () => {
     direction: 'asc'
   });
 
-  // Fetch kitchens and filter options on component mount
+  // Load kitchens and filter options on component mount
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = () => {
       try {
         setIsLoading(true);
-        // Fetch kitchens
-        const kitchensData = await mockKitchenService.getAllKitchens();
-        setKitchens(kitchensData);
-        setFilteredKitchens(kitchensData);
+        // Use static mock data
+        setKitchens(mockKitchens);
+        setFilteredKitchens(mockKitchens);
         
-        // Fetch filter options
-        const options = await mockKitchenService.getFilterOptions();
-        setFilterOptions(options);
+        // Generate filter options from mock data
+        const cities = [...new Set(mockKitchens.map(kitchen => kitchen.city))];
+        const cuisines = [...new Set(mockKitchens.map(kitchen => kitchen.cuisine))];
+        const statuses = [...new Set(mockKitchens.map(kitchen => kitchen.status))];
+        
+        setFilterOptions({
+          cities,
+          cuisines,
+          statuses
+        });
       } catch (error) {
-        console.error('Error fetching kitchens:', error);
+        console.error('Error loading kitchens:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
+    loadData();
   }, []);
 
   // Apply filters when search term or filters change
   useEffect(() => {
     const applyFilters = async () => {
+      // Check if any filters are actually applied
+      const hasFilters = searchTerm.trim() !== '' || 
+                        filters.city !== '' || 
+                        filters.cuisine !== '' || 
+                        filters.status !== '' || 
+                        filters.phoneNumber !== '' || 
+                        filters.kitchenId !== '' || 
+                        filters.orderId !== '';
+
+      // If no filters are applied, show all kitchens
+      if (!hasFilters) {
+        setFilteredKitchens(kitchens);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const filtered = await mockKitchenService.filterKitchens({
-          searchTerm,
-          city: filters.city,
-          cuisine: filters.cuisine,
-          status: filters.status,
-          phoneNumber: filters.phoneNumber,
-          kitchenId: filters.kitchenId,
-          orderId: filters.orderId
-        });
+        // Client-side filtering logic
+        let filtered = [...kitchens];
+
+        // Apply search term filter
+        if (searchTerm.trim()) {
+          filtered = filtered.filter(kitchen => 
+            kitchen.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            kitchen.owner.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+
+        // Apply city filter
+        if (filters.city) {
+          filtered = filtered.filter(kitchen => kitchen.city === filters.city);
+        }
+
+        // Apply cuisine filter
+        if (filters.cuisine) {
+          filtered = filtered.filter(kitchen => kitchen.cuisine === filters.cuisine);
+        }
+
+        // Apply status filter
+        if (filters.status) {
+          filtered = filtered.filter(kitchen => kitchen.status === filters.status);
+        }
+
+        // Apply kitchen ID filter
+        if (filters.kitchenId) {
+          filtered = filtered.filter(kitchen => 
+            kitchen.id.toString().includes(filters.kitchenId)
+          );
+        }
+
+        // Note: phoneNumber and orderId filters are not applicable to mock data structure
+        // but keeping the structure for future API integration
+
         setFilteredKitchens(filtered);
       } catch (error) {
         console.error('Error filtering kitchens:', error);
@@ -83,8 +131,11 @@ const KitchensList = () => {
       }
     };
 
-    applyFilters();
-  }, [searchTerm, filters]);
+    // Only apply filters if kitchens data is loaded
+    if (kitchens.length > 0) {
+      applyFilters();
+    }
+  }, [searchTerm, filters, kitchens]);
 
   // Helper function to get status badge
   const getStatusBadge = (status) => {

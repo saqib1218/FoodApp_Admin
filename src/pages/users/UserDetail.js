@@ -264,7 +264,7 @@ const UserDetail = () => {
               
               <div>
                 <p className="field-label">Phone</p>
-                <p className="field-value">{user.phone || 'Not provided'}</p>
+                <p className="field-value">{user.mobileNumber || 'Not provided'}</p>
               </div>
               
               <div>
