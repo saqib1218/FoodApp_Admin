@@ -4,7 +4,8 @@ import { mockKitchenUsers } from '../../../data/kitchens/mockKitchenUsers';
 import { useAuth } from '../../../hooks/useAuth';
 import { PermissionButton } from '../../../components/PermissionGate';
 import { KitchenContext } from './index';
-import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const KitchenUsersTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
@@ -31,6 +32,21 @@ const KitchenUsersTab = () => {
   const [invitePhone, setInvitePhone] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  
+  // Edit and Delete modal states
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showUpdateConfirmModal, setShowUpdateConfirmModal] = useState(false);
+  const [showViewUserModal, setShowViewUserModal] = useState(false);
+  const [deleteComment, setDeleteComment] = useState('');
+  const [updateComment, setUpdateComment] = useState('');
+  const [editUserForm, setEditUserForm] = useState({
+    name: '',
+    email: '',
+    mobileNumber: '',
+    role: '',
+    status: ''
+  });
 
   // Fetch kitchen users
   useEffect(() => {
@@ -109,6 +125,81 @@ const KitchenUsersTab = () => {
     setInviteName('');
     setInvitePhone('');
     setIsCopied(false);
+  };
+
+  // Handle view user
+  const handleViewUser = (user) => {
+    setSelectedUser(user);
+    setShowViewUserModal(true);
+  };
+
+  // Handle edit user
+  const handleEditUser = (user) => {
+    setSelectedUser(user);
+    setEditUserForm({
+      name: user.name,
+      email: user.email,
+      mobileNumber: user.mobileNumber || user.phone || '',
+      role: user.role,
+      status: user.status
+    });
+    setShowEditUserModal(true);
+  };
+
+  // Handle delete user
+  const handleDeleteUser = (user) => {
+    setSelectedUser(user);
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Handle save edit user
+  const handleSaveEditUser = () => {
+    if (!editUserForm.name.trim() || !editUserForm.email.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    // Update user in local state
+    setKitchenUsers(kitchenUsers.map(user => 
+      user.id === selectedUser.id 
+        ? { ...user, ...editUserForm }
+        : user
+    ));
+    
+    setShowEditUserModal(false);
+    setSelectedUser(null);
+    setEditUserForm({ name: '', email: '', mobileNumber: '', role: '', status: '' });
+  };
+
+  // Handle confirm delete user
+  const handleConfirmDeleteUser = () => {
+    // Remove user from local state
+    setKitchenUsers(kitchenUsers.filter(user => user.id !== selectedUser.id));
+    setShowDeleteConfirmModal(false);
+    setSelectedUser(null);
+    setDeleteComment('');
+  };
+
+  // Handle confirm update user
+  const handleConfirmUpdateUser = () => {
+    if (!editUserForm.name.trim() || !editUserForm.email.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    // Update user in local state
+    setKitchenUsers(kitchenUsers.map(user => 
+      user.id === selectedUser.id 
+        ? { ...user, ...editUserForm }
+        : user
+    ));
+    
+    // Close all modals and reset state
+    setShowUpdateConfirmModal(false);
+    setShowEditUserModal(false);
+    setSelectedUser(null);
+    setEditUserForm({ name: '', email: '', mobileNumber: '', role: '', status: '' });
+    setUpdateComment('');
   };
 
   // Handle status update
@@ -372,25 +463,27 @@ const KitchenUsersTab = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      {hasPermission('edit_kitchen_user') && (
-                        <>
-                          {user.status === 'active' ? (
-                            <button
-                              onClick={() => handleStatusUpdate(user, 'suspended')}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Suspend
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleStatusUpdate(user, 'active')}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              Activate
-                            </button>
-                          )}
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                        title="Edit user"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleViewUser(user)}
+                        className="text-green-600 hover:text-green-900 transition-colors"
+                        title="View user"
+                      >
+                        <EyeIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        className="text-red-600 hover:text-red-900 transition-colors"
+                        title="Delete user"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -718,6 +811,240 @@ const KitchenUsersTab = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Edit User
+              </h3>
+              <button
+                onClick={() => setShowEditUserModal(false)}
+                className="text-neutral-500 hover:text-neutral-700"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={editUserForm.name}
+                  onChange={(e) => setEditUserForm({...editUserForm, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Enter user name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={editUserForm.email}
+                  onChange={(e) => setEditUserForm({...editUserForm, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Enter email address"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  value={editUserForm.mobileNumber}
+                  onChange={(e) => setEditUserForm({...editUserForm, mobileNumber: e.target.value})}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Enter mobile number"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Role
+                </label>
+                <select
+                  value={editUserForm.role}
+                  onChange={(e) => setEditUserForm({...editUserForm, role: e.target.value})}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="Staff">Staff</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Owner">Owner</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editUserForm.status}
+                  onChange={(e) => setEditUserForm({...editUserForm, status: e.target.value})}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="pending">Pending</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowEditUserModal(false)}
+                className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-full hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setShowUpdateConfirmModal(true)}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
+              >
+                Update User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && selectedUser && (
+        <ConfirmationModal
+          isOpen={showDeleteConfirmModal}
+          title="Delete User"
+          message={`Are you sure you want to permanently delete "${selectedUser.name}" from this kitchen? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={handleConfirmDeleteUser}
+          onCancel={() => {
+            setShowDeleteConfirmModal(false);
+            setSelectedUser(null);
+            setDeleteComment('');
+          }}
+          comment={deleteComment}
+          onCommentChange={setDeleteComment}
+          variant="danger"
+        />
+      )}
+
+      {/* Update Confirmation Modal */}
+      {showUpdateConfirmModal && selectedUser && (
+        <ConfirmationModal
+          isOpen={showUpdateConfirmModal}
+          title="Update User"
+          message={`Are you sure you want to update "${selectedUser.name}"'s information? Please provide a comment for this change.`}
+          confirmText="Update"
+          cancelText="Cancel"
+          onConfirm={handleConfirmUpdateUser}
+          onCancel={() => {
+            setShowUpdateConfirmModal(false);
+            setUpdateComment('');
+          }}
+          comment={updateComment}
+          onCommentChange={setUpdateComment}
+          variant="primary"
+        />
+      )}
+
+      {/* View User Modal */}
+      {showViewUserModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium text-neutral-900">
+                User Information - {selectedUser.name}
+              </h3>
+              <button
+                onClick={() => setShowViewUserModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <div className="h-16 w-16 rounded-full bg-neutral-200 flex items-center justify-center text-xl font-semibold">
+                  {selectedUser.name.charAt(0)}
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-medium text-neutral-900">{selectedUser.name}</h4>
+                  <p className="text-sm text-neutral-500">{selectedUser.role}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Email</label>
+                  <div className="text-sm text-gray-900">{selectedUser.email || 'Not provided'}</div>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Mobile Number</label>
+                  <div className="text-sm text-gray-900">{selectedUser.mobileNumber || selectedUser.phone || 'Not provided'}</div>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Status</label>
+                  <div className="mt-1">
+                    {getUserStatusBadge(selectedUser.status)}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">PIN Status</label>
+                  <div className="mt-1">
+                    {selectedUser.pinBlocked ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Blocked
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Last Active</label>
+                  <div className="text-sm text-gray-900">
+                    {getRelativeTime(selectedUser.lastActive || new Date(Date.now() - Math.random() * 7200000))}
+                  </div>
+                </div>
+                
+                {selectedUser.bio && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">Bio</label>
+                    <div className="text-sm text-gray-900">{selectedUser.bio}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowViewUserModal(false)}
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

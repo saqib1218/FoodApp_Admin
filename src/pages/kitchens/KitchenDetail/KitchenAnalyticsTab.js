@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { KitchenContext } from './index';
-import { useGetKitchenAnalyticsQuery, useGetKitchenStatsQuery } from '../../../store/api/modules/kitchens/kitchensApi';
+// TODO: Replace with RTK Query hooks when migrating API calls
+import { getKitchenAnalytics, getKitchenStats } from '../../../data/kitchens/mockKitchenAnalytics';
 import PermissionGate from '../../../components/PermissionGate';
 import { useAuth } from '../../../hooks/useAuth';
 
@@ -9,43 +10,37 @@ const KitchenAnalyticsTab = () => {
   const kitchenId = kitchen?.id;
   const { hasPermission } = useAuth();
 
-  // State variables
+  // State variables  
   const [dateRange, setDateRange] = useState('month');
+  const [analytics, setAnalytics] = useState({});
+  const [kitchenStats, setKitchenStats] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  // RTK Query hooks
-  const {
-    data: analytics = {},
-    isLoading: isLoadingAnalytics,
-    error: analyticsError
-  } = useGetKitchenAnalyticsQuery({ 
-    kitchenId, 
-    period: dateRange 
-  }, {
-    skip: !kitchenId || !hasPermission('view_kitchen_analytics')
-  });
+  // Load analytics data from static mock data
+  useEffect(() => {
+    if (kitchenId) {
+      setIsLoading(true);
+      
+      // Simulate API loading delay
+      setTimeout(() => {
+        const analyticsData = getKitchenAnalytics(kitchenId, dateRange);
+        const statsData = getKitchenStats(kitchenId);
+        
+        setAnalytics(analyticsData.data);
+        setKitchenStats(statsData.data);
+        setIsLoading(false);
+      }, 500);
+    }
+  }, [kitchenId, dateRange]);
 
-  const {
-    data: kitchenStats = {},
-    isLoading: isLoadingStats,
-    error: statsError
-  } = useGetKitchenStatsQuery(kitchenId, {
-    skip: !kitchenId || !hasPermission('view_kitchen_analytics')
-  });
-
-  const isLoading = isLoadingAnalytics || isLoadingStats;
-
-  // Extract data from RTK Query responses
+  // Extract data from mock responses
   const topDishes = analytics?.topDishes || [];
   const orderTrends = analytics?.orderTrends || [];
   const revenueData = analytics?.revenueData || [];
-
-  if (!hasPermission('view_kitchen_analytics')) {
-    return (
-      <div className="p-6 text-center">
-        <p className="text-gray-500">You don't have permission to view kitchen analytics.</p>
-      </div>
-    );
-  }
+  const peakHours = analytics?.peakHours || [];
+  const customerDemographics = analytics?.customerDemographics || {};
+  const paymentMethods = analytics?.paymentMethods || [];
+  const monthlyComparison = analytics?.monthlyComparison || {};
 
   // Handle date range change
   const handleDateRangeChange = (e) => {
@@ -80,14 +75,7 @@ const KitchenAnalyticsTab = () => {
     return '→';
   };
 
-  if (!hasPermission('view_kitchen_analytics')) {
-    return (
-      <div className="text-center py-12 bg-neutral-50 rounded-lg">
-        <p className="text-neutral-500">You don't have permission to view kitchen analytics.</p>
-      </div>
-    );
-  }
-
+ 
   if (isLoading && !analytics) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -130,10 +118,10 @@ const KitchenAnalyticsTab = () => {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-neutral-500">Total Orders</p>
-                <p className="mt-2 text-2xl font-medium text-neutral-900">{analytics.totalOrders}</p>
+                <p className="mt-2 text-2xl font-medium text-neutral-900">{analytics.totalOrders || 0}</p>
               </div>
-              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.ordersTrend)}`}>
-                {getTrendArrow(analytics.ordersTrend)} {formatPercentage(Math.abs(analytics.ordersTrend))}
+              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.ordersTrend || 0)}`}>
+                {getTrendArrow(analytics.ordersTrend || 0)} {formatPercentage(Math.abs(analytics.ordersTrend || 0))}
               </div>
             </div>
             <p className="mt-2 text-xs text-neutral-500">vs. previous period</p>
@@ -144,10 +132,10 @@ const KitchenAnalyticsTab = () => {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-neutral-500">Total Revenue</p>
-                <p className="mt-2 text-2xl font-medium text-neutral-900">{formatCurrency(analytics.totalRevenue)}</p>
+                <p className="mt-2 text-2xl font-medium text-neutral-900">{formatCurrency(analytics.totalRevenue || 0)}</p>
               </div>
-              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.revenueTrend)}`}>
-                {getTrendArrow(analytics.revenueTrend)} {formatPercentage(Math.abs(analytics.revenueTrend))}
+              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.revenueTrend || 0)}`}>
+                {getTrendArrow(analytics.revenueTrend || 0)} {formatPercentage(Math.abs(analytics.revenueTrend || 0))}
               </div>
             </div>
             <p className="mt-2 text-xs text-neutral-500">vs. previous period</p>
@@ -158,10 +146,10 @@ const KitchenAnalyticsTab = () => {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-neutral-500">Avg. Order Value</p>
-                <p className="mt-2 text-2xl font-medium text-neutral-900">{formatCurrency(analytics.averageOrderValue)}</p>
+                <p className="mt-2 text-2xl font-medium text-neutral-900">{formatCurrency(analytics.averageOrderValue || 0)}</p>
               </div>
-              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.aovTrend)}`}>
-                {getTrendArrow(analytics.aovTrend)} {formatPercentage(Math.abs(analytics.aovTrend))}
+              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.aovTrend || 0)}`}>
+                {getTrendArrow(analytics.aovTrend || 0)} {formatPercentage(Math.abs(analytics.aovTrend || 0))}
               </div>
             </div>
             <p className="mt-2 text-xs text-neutral-500">vs. previous period</p>
@@ -172,13 +160,13 @@ const KitchenAnalyticsTab = () => {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-neutral-500">Customer Rating</p>
-                <p className="mt-2 text-2xl font-medium text-neutral-900">{analytics.averageRating.toFixed(1)}/5.0</p>
+                <p className="mt-2 text-2xl font-medium text-neutral-900">{analytics.averageRating?.toFixed(1) || '0.0'}/5.0</p>
               </div>
-              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.ratingTrend)}`}>
-                {getTrendArrow(analytics.ratingTrend)} {formatPercentage(Math.abs(analytics.ratingTrend))}
+              <div className={`text-sm font-medium ${getTrendIndicatorClass(analytics.ratingTrend || 0)}`}>
+                {getTrendArrow(analytics.ratingTrend || 0)} {formatPercentage(Math.abs(analytics.ratingTrend || 0))}
               </div>
             </div>
-            <p className="mt-2 text-xs text-neutral-500">Based on {analytics.totalRatings} ratings</p>
+            <p className="mt-2 text-xs text-neutral-500">Based on {analytics.totalRatings || 0} ratings</p>
           </div>
         </div>
       )}
@@ -191,12 +179,16 @@ const KitchenAnalyticsTab = () => {
           </div>
           <div className="p-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {Object.entries(analytics.orderStatusDistribution).map(([status, count]) => (
+              {analytics.orderStatusDistribution ? Object.entries(analytics.orderStatusDistribution).map(([status, count]) => (
                 <div key={status} className="text-center">
                   <div className="text-2xl font-medium text-neutral-900">{count}</div>
                   <div className="mt-1 text-sm text-neutral-500 capitalize">{status}</div>
                 </div>
-              ))}
+              )) : (
+                <div className="col-span-full text-center py-8 bg-neutral-50 rounded-lg">
+                  <p className="text-neutral-500">No order status data available.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -274,7 +266,7 @@ const KitchenAnalyticsTab = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-neutral-700">{dish.averageRating.toFixed(1)}/5.0</div>
+                        <div className="text-sm text-neutral-700">{dish.averageRating?.toFixed(1) || '0.0'}/5.0</div>
                         <div className="text-xs text-neutral-500">({dish.ratingCount} ratings)</div>
                       </td>
                     </tr>

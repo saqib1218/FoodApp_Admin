@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { PencilIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, XMarkIcon, PlusIcon, EyeIcon, TrashIcon } from '@heroicons/react/24/outline';
 // TODO: Replace with RTK Query hooks when migrating API calls
 import kitchenAddresses from '../../../data/kitchens/kitchenAddresses';
 import { useAuth } from '../../../hooks/useAuth';
-import { PermissionButton } from '../../../components/PermissionGate';
+
 import { KitchenContext } from './index';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
@@ -19,6 +19,13 @@ const KitchenAddressesTab = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmComment, setConfirmComment] = useState('');
+  
+  // New modal states
+  const [showViewAddressModal, setShowViewAddressModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUpdateConfirmModal, setShowUpdateConfirmModal] = useState(false);
+  const [deleteComment, setDeleteComment] = useState('');
+  const [updateComment, setUpdateComment] = useState('');
   const [addressForm, setAddressForm] = useState({
     street: '',
     city: '',
@@ -68,12 +75,58 @@ const KitchenAddressesTab = () => {
       city: address.city || '',
       cityZone: address.cityZone || '',
       nearestLocation: address.nearestLocation || '',
-      locationLink: address.locationLink || '',
-      longitude: address.longitude || '',
-      latitude: address.latitude || '',
-      status: address.status || 'active'
+      type: address.type || 'primary'
     });
     setShowAddressModal(true);
+  };
+
+  // Handle view address - open view modal
+  const handleViewAddress = (address) => {
+    setSelectedAddress(address);
+    setShowViewAddressModal(true);
+  };
+
+  // Handle delete address - open delete confirmation modal
+  const handleDeleteAddress = (address) => {
+    setSelectedAddress(address);
+    setDeleteComment('');
+    setShowDeleteModal(true);
+  };
+
+  // Confirm delete address
+  const handleConfirmDeleteAddress = () => {
+    if (!selectedAddress) return;
+
+    // Update local state directly (no API call with mock data)
+    setAddresses(addresses.filter(address => address.id !== selectedAddress.id));
+    
+    setShowDeleteModal(false);
+    setSelectedAddress(null);
+    setDeleteComment('');
+  };
+
+  // Handle update confirmation for address updates
+  const handleConfirmUpdateAddress = () => {
+    if (!selectedAddress) return;
+
+    // Update local state directly (no API call with mock data)
+    setAddresses(addresses.map(address => 
+      address.id === selectedAddress.id 
+        ? { ...address, ...addressForm }
+        : address
+    ));
+    
+    setShowUpdateConfirmModal(false);
+    setShowAddressModal(false);
+    setSelectedAddress(null);
+    setUpdateComment('');
+    setAddressForm({
+      fullAddress: '',
+      city: '',
+      cityZone: '',
+      nearestLocation: '',
+      type: 'primary'
+    });
   };
 
   // Handle get location
@@ -100,10 +153,17 @@ const KitchenAddressesTab = () => {
   // Handle submit (add or edit)
   const handleSubmit = (e) => {
     e.preventDefault();
-    setModalAction(selectedAddress ? 'edit' : 'add');
-    setShowAddressModal(false);
-    setConfirmComment('');
-    setShowConfirmModal(true);
+    if (selectedAddress) {
+      // For edit, show update confirmation modal
+      setUpdateComment('');
+      setShowUpdateConfirmModal(true);
+    } else {
+      // For add, proceed directly
+      setModalAction('add');
+      setShowAddressModal(false);
+      setConfirmComment('');
+      setShowConfirmModal(true);
+    }
   };
 
   // Confirm address action
@@ -197,14 +257,13 @@ const KitchenAddressesTab = () => {
             Manage the addresses associated with this kitchen.
           </p>
         </div>
-        <PermissionButton
-          permission="edit_kitchen_addresses"
+        <button
           onClick={handleAddAddress}
           className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium flex items-center"
         >
           <PlusIcon className="h-4 w-4 mr-1" />
           Add Address
-        </PermissionButton>
+        </button>
       </div>
 
       {kitchenAddresses.length === 0 ? (
@@ -255,14 +314,29 @@ const KitchenAddressesTab = () => {
                     {getStatusBadge(address.status || 'active')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <PermissionButton
-                      permission="edit_kitchen_addresses"
-                      onClick={() => handleEditAddress(address)}
-                      className="text-primary-600 hover:text-primary-900 inline-flex items-center"
-                    >
-                      <PencilIcon className="h-4 w-4 mr-1" />
-                      Edit
-                    </PermissionButton>
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleEditAddress(address)}
+                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                        title="Edit address"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleViewAddress(address)}
+                        className="text-green-600 hover:text-green-900 transition-colors"
+                        title="View address"
+                      >
+                        <EyeIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAddress(address)}
+                        className="text-red-600 hover:text-red-900 transition-colors"
+                        title="Delete address"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -460,6 +534,123 @@ const KitchenAddressesTab = () => {
         confirmButtonColor="primary"
         isCommentRequired={true}
       />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedAddress && (
+        <ConfirmationModal
+          isOpen={showDeleteModal}
+          title="Delete Address"
+          message={`Are you sure you want to permanently delete this address? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={handleConfirmDeleteAddress}
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setSelectedAddress(null);
+            setDeleteComment('');
+          }}
+          comment={deleteComment}
+          onCommentChange={setDeleteComment}
+          variant="danger"
+        />
+      )}
+
+      {/* Update Confirmation Modal */}
+      {showUpdateConfirmModal && selectedAddress && (
+        <ConfirmationModal
+          isOpen={showUpdateConfirmModal}
+          title="Update Address"
+          message={`Are you sure you want to update this address? Please provide a comment for this change.`}
+          confirmText="Update"
+          cancelText="Cancel"
+          onConfirm={handleConfirmUpdateAddress}
+          onCancel={() => {
+            setShowUpdateConfirmModal(false);
+            setUpdateComment('');
+          }}
+          comment={updateComment}
+          onCommentChange={setUpdateComment}
+          variant="primary"
+        />
+      )}
+
+      {/* View Address Modal */}
+      {showViewAddressModal && selectedAddress && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Address Details
+              </h3>
+              <button
+                onClick={() => setShowViewAddressModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500">Full Address</label>
+                <div className="text-sm text-gray-900">{selectedAddress.fullAddress || 'Not provided'}</div>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-gray-500">City</label>
+                <div className="text-sm text-gray-900">{selectedAddress.city || 'Not provided'}</div>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-gray-500">City Zone</label>
+                <div className="text-sm text-gray-900">{selectedAddress.cityZone || 'Not provided'}</div>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-gray-500">Nearest Location</label>
+                <div className="text-sm text-gray-900">{selectedAddress.nearestLocation || 'Not provided'}</div>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-gray-500">Type</label>
+                <div className="text-sm text-gray-900 capitalize">{selectedAddress.type || 'primary'}</div>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-gray-500">Status</label>
+                <div className="mt-1">
+                  {getStatusBadge(selectedAddress.status || 'active')}
+                </div>
+              </div>
+              
+              {selectedAddress.locationLink && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Location Link</label>
+                  <div className="text-sm">
+                    <a 
+                      href={selectedAddress.locationLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:text-primary-900"
+                    >
+                      View on Map
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowViewAddressModal(false)}
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

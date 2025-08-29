@@ -155,7 +155,7 @@ const KitchenDetail = () => {
     discounts: <KitchenDiscountsTab />,
     feedback: <KitchenFeedbackTab />,
     analytics: <KitchenAnalyticsTab />,
-    orders: hasPermission('view_orders') ? <KitchenOrdersTab /> : null
+    orders: <KitchenOrdersTab />
   };
 
   return (
@@ -268,7 +268,7 @@ const KitchenDetail = () => {
               Kitchen Media
             </button>
             
-            {hasPermission('view_kitchen_addresses') && (
+           
               <button
                 onClick={() => handleTabChange('addresses')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -279,7 +279,7 @@ const KitchenDetail = () => {
               >
                 Kitchen Addresses
               </button>
-            )}
+           
                
                <button
               onClick={() => handleTabChange('engagement')}

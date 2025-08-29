@@ -171,13 +171,15 @@ const KitchenFeedbackTab = () => {
                   {getStatusBadge(feedback.status)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleViewFeedback(feedback)}
-                    className="text-primary-600 hover:text-primary-900 flex items-center space-x-1"
-                  >
-                    <EyeIcon className="h-4 w-4" />
-                    <span>View</span>
-                  </button>
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => handleViewFeedback(feedback)}
+                      className="text-green-600 hover:text-green-900 transition-colors"
+                      title="View feedback"
+                    >
+                      <EyeIcon className="h-4 w-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

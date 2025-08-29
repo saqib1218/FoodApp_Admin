@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { XMarkIcon, PencilIcon, EyeIcon, PlusIcon, MagnifyingGlassIcon, FunnelIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PencilIcon, EyeIcon, TrashIcon, PlusIcon, MagnifyingGlassIcon, FunnelIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useParams, useNavigate } from 'react-router-dom';
 // TODO: Replace with RTK Query hooks when migrating API calls
-import { mockKitchenDishService } from '../../../utils/mockServiceHelpers';
+import { mockDishes, getDishesByKitchenId, getDishCategories, getDishCuisines, getDishStatuses } from '../../../data/dishes/mockDishes';
 import { useAuth } from '../../../hooks/useAuth';
 import { KitchenContext } from './index';
-import { PermissionButton } from '../../../components/PermissionGate';
+import ConfirmationModal from '../../../components/ConfirmationModal';
+
 
 
 const KitchenDishesTab = () => {
@@ -24,6 +25,11 @@ const KitchenDishesTab = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
+  
+  // New modal states
+  const [showViewDishModal, setShowViewDishModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteComment, setDeleteComment] = useState('');
 
   const [filters, setFilters] = useState({
     status: 'all',
@@ -34,15 +40,15 @@ const KitchenDishesTab = () => {
   const [categories, setCategories] = useState([]);
 
 
-  // Fetch kitchen dishes and categories
+  // Load kitchen dishes and categories from static data
   useEffect(() => {
-    const fetchDishData = async () => {
+    const loadDishData = () => {
       try {
         setIsLoading(true);
-        const [dishesData, categoriesData] = await Promise.all([
-          mockKitchenDishService.getKitchenDishes(kitchenId),
-          mockKitchenDishService.getDishCategories()
-        ]);
+        // Get dishes for current kitchen using helper function
+        const dishesData = getDishesByKitchenId(parseInt(kitchenId));
+        const categoriesData = getDishCategories();
+        
         setDishes(dishesData);
         setCategories(categoriesData);
       } catch (err) {
@@ -52,7 +58,9 @@ const KitchenDishesTab = () => {
       }
     };
 
-    fetchDishData();
+    if (kitchenId) {
+      loadDishData();
+    }
   }, [kitchenId]);
 
   // Handle dish view - navigate to detail page
@@ -62,6 +70,37 @@ const KitchenDishesTab = () => {
   const handleAddDish = () => {
     navigate(`/kitchens/${kitchenId}/AddEditDish`);
   };
+
+  // Handle edit dish - navigate to edit page
+  const handleEditDish = (dish) => {
+    navigate(`/kitchens/${kitchenId}/AddEditDish`);
+  };
+
+  // Handle view dish - open view modal
+  const handleViewDishModal = (dish) => {
+    setSelectedDish(dish);
+    setShowViewDishModal(true);
+  };
+
+  // Handle delete dish - open delete confirmation modal
+  const handleDeleteDish = (dish) => {
+    setSelectedDish(dish);
+    setDeleteComment('');
+    setShowDeleteModal(true);
+  };
+
+  // Confirm delete dish
+  const handleConfirmDeleteDish = () => {
+    if (!selectedDish) return;
+
+    // Update local state directly (no API call with mock data)
+    setDishes(dishes.filter(dish => dish.id !== selectedDish.id));
+    
+    setShowDeleteModal(false);
+    setSelectedDish(null);
+    setDeleteComment('');
+  };
+
   // Handle status change
   const handleStatusChange = (dish, status) => {
     setSelectedDish(dish);
@@ -71,14 +110,13 @@ const KitchenDishesTab = () => {
   };
 
   // Confirm status change
-  const confirmStatusChange = async () => {
+  const confirmStatusChange = () => {
     if (!selectedDish || !newStatus) return;
 
     try {
       setIsLoading(true);
-      await mockKitchenDishService.updateDishStatus(selectedDish.id, newStatus, statusComment);
       
-      // Update local state
+      // Update local state directly (no API call with mock data)
       setDishes(dishes.map(dish => 
         dish.id === selectedDish.id 
           ? { ...dish, status: newStatus, lastStatusChange: new Date().toISOString() } 
@@ -86,6 +124,9 @@ const KitchenDishesTab = () => {
       ));
       
       setShowStatusModal(false);
+      setSelectedDish(null);
+      setNewStatus('');
+      setStatusComment('');
     } catch (err) {
       console.error('Failed to update dish status:', err);
     } finally {
@@ -220,14 +261,13 @@ const KitchenDishesTab = () => {
         </p>
         </div>
       
-        <PermissionButton
-          permission="edit_kitchen"
+        <button
           onClick={handleAddDish}
           className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium flex items-center"
         >
           <PlusIcon className="h-4 w-4 mr-1" />
           Add Dish
-        </PermissionButton>
+        </button>
       </div>
 
       {/* Filters and Search */}
@@ -417,38 +457,26 @@ const KitchenDishesTab = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <button
-                          onClick={() => handleViewDish(dish)}
-                          className="p-1 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded"
+                          onClick={() => handleEditDish(dish)}
+                          className="text-blue-600 hover:text-blue-900 transition-colors"
+                          title="Edit dish"
                         >
-                          <EyeIcon className="h-5 w-5" />
+                          <PencilIcon className="h-4 w-4" />
                         </button>
-                        
-                        {hasPermission('edit_kitchen_dish') && (
-                          <button
-                            onClick={() => {/* Edit dish functionality */}}
-                            className="p-1 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                        )}
-                        
-                        {hasPermission('edit_kitchen_dish') && dish.status !== 'active' && (
-                          <button
-                            onClick={() => handleStatusChange(dish, 'active')}
-                            className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        
-                        {hasPermission('edit_kitchen_dish') && dish.status !== 'rejected' && (
-                          <button
-                            onClick={() => handleStatusChange(dish, 'rejected')}
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                          >
-                            Reject
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleViewDishModal(dish)}
+                          className="text-green-600 hover:text-green-900 transition-colors"
+                          title="View dish"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDish(dish)}
+                          className="text-red-600 hover:text-red-900 transition-colors"
+                          title="Delete dish"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -514,6 +542,121 @@ const KitchenDishesTab = () => {
                 }`}
               >
                 {newStatus === 'active' ? 'Approve' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedDish && (
+        <ConfirmationModal
+          isOpen={showDeleteModal}
+          title="Delete Dish"
+          message={`Are you sure you want to permanently delete "${selectedDish.name}" dish? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={handleConfirmDeleteDish}
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setSelectedDish(null);
+            setDeleteComment('');
+          }}
+          comment={deleteComment}
+          onCommentChange={setDeleteComment}
+          variant="danger"
+        />
+      )}
+
+      {/* View Dish Modal */}
+      {showViewDishModal && selectedDish && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium text-neutral-900">
+                Dish Details - {selectedDish.name}
+              </h3>
+              <button
+                onClick={() => setShowViewDishModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Dish Image */}
+              <div className="space-y-4">
+                <div className="aspect-w-16 aspect-h-9 bg-neutral-100 rounded-lg overflow-hidden">
+                  {selectedDish.image ? (
+                    <img
+                      src={selectedDish.image}
+                      alt={selectedDish.name}
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-neutral-200 flex items-center justify-center">
+                      <span className="text-neutral-500">No image available</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Dish Information */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Dish Name</label>
+                  <div className="text-sm text-gray-900">{selectedDish.name}</div>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Category</label>
+                  <div className="text-sm text-gray-900">{selectedDish.category}</div>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Price</label>
+                  <div className="text-sm text-gray-900">{formatCurrency(selectedDish.price)}</div>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Status</label>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(selectedDish.status)}`}>
+                      {selectedDish.status.charAt(0).toUpperCase() + selectedDish.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+                
+                {selectedDish.description && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">Description</label>
+                    <div className="text-sm text-gray-900">{selectedDish.description}</div>
+                  </div>
+                )}
+                
+                {selectedDish.ingredients && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">Ingredients</label>
+                    <div className="text-sm text-gray-900">{selectedDish.ingredients}</div>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Last Updated</label>
+                  <div className="text-sm text-gray-900">
+                    {new Date(selectedDish.lastStatusChange || selectedDish.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowViewDishModal(false)}
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors text-sm font-medium"
+              >
+                Close
               </button>
             </div>
           </div>
