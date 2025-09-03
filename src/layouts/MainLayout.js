@@ -54,7 +54,7 @@ const MainLayout = () => {
 
   // Define navigation items with required permissions (using database permission keys)
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: HomeIcon, permission: 'admin.dashboard.view' },
+    { name: 'Dashboard', href: '/', icon: HomeIcon,  },
     { name: 'Partners', href: '/parteners', icon: BuildingOfficeIcon, permission: 'admin.partner.view' },
     { name: 'Kitchens', href: '/kitchens', icon: BuildingStorefrontIcon, permission: 'admin.kitchen.view' },
     // { name: 'Onboarding Queue', href: '/onboarding', icon: QueueListIcon, permission: 'admin.kitchen.view' },

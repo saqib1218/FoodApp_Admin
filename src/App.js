@@ -74,9 +74,9 @@ function App() {
             </AuthRoute>
           }>
             <Route path="/" element={
-              <ProtectedRoute routeName="dashboard">
+             
                 <Dashboard />
-              </ProtectedRoute>
+             
             } />
             
             <Route path="/kitchens" element={

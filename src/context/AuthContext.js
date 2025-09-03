@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }) => {
     logout();
   }, []);
 
-  // Login function with real API integration
+  // Login function with real API integration and coordinated permission loading
   const login = async (email, password) => {
     try {
       setIsLoading(true);
@@ -184,7 +184,29 @@ export const AuthProvider = ({ children }) => {
       };
       TokenStorage.setUserInfo(userInfo);
       
-      // Update state
+      // Fetch user permissions immediately after successful login
+      console.log('Login successful, fetching user permissions...');
+      try {
+        const permissionsResponse = await axios.get(`${apiBaseUrl}/admin/permissions/by-user/${decodedToken.userId}`);
+        console.log('Permissions API Response:', permissionsResponse.data);
+        
+        if (permissionsResponse.data?.data?.permissions) {
+          const permissions = permissionsResponse.data.data.permissions;
+          const permissionKeys = permissions.map(permission => permission.key);
+          
+          // Update userInfo with fetched permissions
+          userInfo.fetchedPermissions = permissions;
+          userInfo.permissionKeys = permissionKeys;
+          TokenStorage.setUserInfo(userInfo);
+          
+          console.log('Permissions loaded successfully:', permissionKeys);
+        }
+      } catch (permissionError) {
+        console.error('Failed to fetch permissions during login:', permissionError);
+        // Continue with login even if permissions fail - they can be loaded later
+      }
+      
+      // Update state after permissions are loaded (or attempted)
       setCurrentUser(userInfo);
       setIsAuthenticated(true);
       setUserRole(decodedToken.role);
@@ -195,7 +217,7 @@ export const AuthProvider = ({ children }) => {
         scheduleTokenRefresh(expiresIn);
       }
       
-      return { success: true };
+      return { success: true, userInfo };
       
     } catch (error) {
       console.error('Login failed:', error);

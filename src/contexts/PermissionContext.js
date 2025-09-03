@@ -28,9 +28,9 @@ export const PermissionProvider = ({ children }) => {
     console.log('PermissionContext: Permissions cleared on logout');
   };
 
-  // Get user ID from encrypted session storage
+  // Get user ID and check for pre-loaded permissions from encrypted session storage
   useEffect(() => {
-    const getUserIdFromToken = () => {
+    const getUserDataAndPermissions = () => {
       try {
         // Use the correct session storage key from AuthContext
         const encryptedUserData = sessionStorage.getItem('user_info');
@@ -43,6 +43,14 @@ export const PermissionProvider = ({ children }) => {
           if (userData && userData.id) {
             console.log('PermissionContext: Setting userId:', userData.id);
             setUserId(userData.id);
+            
+            // Check if permissions were already loaded during login
+            if (userData.fetchedPermissions && userData.permissionKeys) {
+              console.log('PermissionContext: Using pre-loaded permissions from login');
+              setUserPermissions(userData.fetchedPermissions);
+              setPermissionKeys(userData.permissionKeys);
+              setIsPermissionsLoaded(true);
+            }
           } else {
             console.log('PermissionContext: No user ID found in userData');
           }
@@ -58,7 +66,7 @@ export const PermissionProvider = ({ children }) => {
       }
     };
 
-    getUserIdFromToken();
+    getUserDataAndPermissions();
     
     // Set up interval to check for logout (session storage cleared)
     const checkInterval = setInterval(() => {

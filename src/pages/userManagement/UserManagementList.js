@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon, EyeIcon, EyeSlashIcon, KeyIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import DialogueBox from '../../components/DialogueBox';
 import {
   useGetUsersQuery,
   useGetUserByIdQuery,
@@ -23,6 +24,26 @@ import { PERMISSIONS } from '../../contexts/PermissionRegistry';
 const UserManagementList = () => {
   const [activeTab, setActiveTab] = useState('role');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Dialogue box state for API feedback
+  const [dialogueBox, setDialogueBox] = useState({
+    isOpen: false,
+    type: 'success', // 'success' or 'error'
+    title: '',
+    message: ''
+  });
+
+  // Loading states for different operations
+  const [loadingStates, setLoadingStates] = useState({
+    createRole: false,
+    updateRole: false,
+    deleteRole: false,
+    createUser: false,
+    updateUser: false,
+    deleteUser: false,
+    updateUserStatus: false,
+    createPermission: false
+  });
 
   // Permission hooks
   const { hasPermission } = usePermissions();
@@ -103,6 +124,27 @@ const UserManagementList = () => {
   const [updateRole] = useUpdateRoleMutation();
   const [deleteRole] = useDeleteRoleMutation();
   const [createPermission] = useCreatePermissionMutation();
+
+  // Helper functions for dialogue box and loading states
+  const showDialogue = (type, title, message) => {
+    setDialogueBox({
+      isOpen: true,
+      type,
+      title,
+      message
+    });
+  };
+
+  const closeDialogue = () => {
+    setDialogueBox(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const setLoading = (operation, isLoading) => {
+    setLoadingStates(prev => ({
+      ...prev,
+      [operation]: isLoading
+    }));
+  };
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -210,7 +252,7 @@ const UserManagementList = () => {
   const handleSaveRole = async (event) => {
     event?.preventDefault();
     if (roleForm.name.trim() && roleForm.description.trim() && assignedPermissions.length > 0) {
-      // Use RTK Query mutation to create role
+      setLoading('createRole', true);
       try {
         await createRole({
           name: roleForm.name,
@@ -222,8 +264,12 @@ const UserManagementList = () => {
         setShowAssignPermissionsModal(false);
         setRoleForm({ name: '', description: '', isActive: true });
         setAssignedPermissions([]);
+        showDialogue('success', 'Success', 'Role created successfully');
       } catch (error) {
         console.error('Failed to create role:', error);
+        showDialogue('error', 'Error', 'Role not created. Please try again.');
+      } finally {
+        setLoading('createRole', false);
       }
     }
   };
@@ -231,7 +277,7 @@ const UserManagementList = () => {
   const handleSaveEditRole = async (event) => {
     event?.preventDefault();
     if (roleForm.name.trim() && roleForm.description.trim() && assignedPermissions.length > 0 && editingRoleId) {
-      // Use RTK Query mutation to update role
+      setLoading('updateRole', true);
       try {
         await updateRole({
           id: editingRoleId,
@@ -245,8 +291,12 @@ const UserManagementList = () => {
         setRoleForm({ name: '', description: '', isActive: true });
         setAssignedPermissions([]);
         setEditingRoleId(null);
+        showDialogue('success', 'Success', 'Role updated successfully');
       } catch (error) {
         console.error('Failed to update role:', error);
+        showDialogue('error', 'Error', 'Role not updated. Please try again.');
+      } finally {
+        setLoading('updateRole', false);
       }
     }
   };
@@ -306,7 +356,7 @@ const UserManagementList = () => {
 
   const handleSaveUser = async () => {
     if (userForm.name && userForm.email && userForm.roleId) {
-      // Use RTK Query mutation to create user
+      setLoading('createUser', true);
       try {
         await createUser({
           name: userForm.name,
@@ -316,15 +366,19 @@ const UserManagementList = () => {
         }).unwrap();
         setShowCreateUserModal(false);
         setUserForm({ name: '', email: '', mobileNumber: '', roleId: '' });
+        showDialogue('success', 'Success', 'User created successfully');
       } catch (error) {
         console.error('Failed to create user:', error);
+        showDialogue('error', 'Error', 'User not created. Please try again.');
+      } finally {
+        setLoading('createUser', false);
       }
     }
   };
 
   const handleUpdateUser = async () => {
     if (userForm.name && userForm.email && userForm.roleId && editingUser) {
-      // Use RTK Query mutation to update user
+      setLoading('updateUser', true);
       try {
         await updateUser({
           id: editingUser.id,
@@ -337,8 +391,12 @@ const UserManagementList = () => {
         setEditingUser(null);
         setEditingUserId(null);
         setUserForm({ name: '', email: '', mobileNumber: '', roleId: '' });
+        showDialogue('success', 'Success', 'User updated successfully');
       } catch (error) {
         console.error('Failed to update user:', error);
+        showDialogue('error', 'Error', 'User not updated. Please try again.');
+      } finally {
+        setLoading('updateUser', false);
       }
     }
   };
@@ -383,14 +441,19 @@ const UserManagementList = () => {
   };
 
   const handleToggleUserStatus = async (userId, currentStatus) => {
+    setLoading('updateUserStatus', true);
     try {
       await updateUserStatus({
         userId: userId,
         isActive: !currentStatus
       }).unwrap();
+      const statusText = !currentStatus ? 'activated' : 'deactivated';
+      showDialogue('success', 'Success', `User ${statusText} successfully`);
     } catch (error) {
       console.error('Failed to update user status:', error);
-      alert('Failed to update user status. Please try again.');
+      showDialogue('error', 'Error', 'Failed to update user status. Please try again.');
+    } finally {
+      setLoading('updateUserStatus', false);
     }
   };
 
@@ -402,6 +465,7 @@ const UserManagementList = () => {
 
   const handleSavePermission = async () => {
     if (permissionForm.key.trim() && permissionForm.name.trim() && permissionForm.description.trim()) {
+      setLoading('createPermission', true);
       try {
         await createPermission({
           key: permissionForm.key,
@@ -410,8 +474,12 @@ const UserManagementList = () => {
         }).unwrap();
         setShowCreatePermissionModal(false);
         setPermissionForm({ key: '', name: '', description: '' });
+        showDialogue('success', 'Success', 'Permission created successfully');
       } catch (error) {
         console.error('Failed to create permission:', error);
+        showDialogue('error', 'Error', 'Permission not created. Please try again.');
+      } finally {
+        setLoading('createPermission', false);
       }
     }
   };
@@ -435,17 +503,27 @@ const UserManagementList = () => {
 
     switch (confirmationAction) {
       case 'delete_role':
+        setLoading('deleteRole', true);
         try {
           await deleteRole(pendingAction.roleId).unwrap();
+          showDialogue('success', 'Success', 'Role deleted successfully');
         } catch (error) {
           console.error('Failed to delete role:', error);
+          showDialogue('error', 'Error', 'Role not deleted. Please try again.');
+        } finally {
+          setLoading('deleteRole', false);
         }
         break;
       case 'delete_user':
+        setLoading('deleteUser', true);
         try {
           await deleteUser(pendingAction.userId).unwrap();
+          showDialogue('success', 'Success', 'User deleted successfully');
         } catch (error) {
           console.error('Failed to delete user:', error);
+          showDialogue('error', 'Error', 'User not deleted. Please try again.');
+        } finally {
+          setLoading('deleteUser', false);
         }
         break;
       case 'delete_permission':
@@ -1185,9 +1263,12 @@ const UserManagementList = () => {
               </button>
               <button
                 onClick={editingRoleId ? handleSaveEditRole : handleSaveRole}
-                disabled={assignedPermissions.length === 0}
-                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                disabled={assignedPermissions.length === 0 || loadingStates.createRole || loadingStates.updateRole}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center"
               >
+                {(loadingStates.createRole || loadingStates.updateRole) && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
                 {editingRoleId ? 'Update Role' : 'Save Role'}
               </button>
             </div>
@@ -1276,9 +1357,12 @@ const UserManagementList = () => {
               </button>
               <button
                 onClick={handleSaveUser}
-                disabled={!userForm.name.trim() || !userForm.email.trim() || !userForm.roleId}
-                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                disabled={!userForm.name.trim() || !userForm.email.trim() || !userForm.roleId || loadingStates.createUser}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center"
               >
+                {loadingStates.createUser && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
                 Save User
               </button>
             </div>
@@ -1379,9 +1463,12 @@ const UserManagementList = () => {
               </button>
               <button
                 onClick={handleUpdateUser}
-                disabled={!userForm.name.trim() || !userForm.email.trim() || !userForm.roleId}
-                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                disabled={!userForm.name.trim() || !userForm.email.trim() || !userForm.roleId || loadingStates.updateUser}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center"
               >
+                {loadingStates.updateUser && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
                 Update User
               </button>
             </div>
@@ -1522,9 +1609,12 @@ const UserManagementList = () => {
               </button>
               <button
                 onClick={handleSavePermission}
-                disabled={!permissionForm.key.trim() || !permissionForm.name.trim() || !permissionForm.description.trim()}
-                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                disabled={!permissionForm.key.trim() || !permissionForm.name.trim() || !permissionForm.description.trim() || loadingStates.createPermission}
+                className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center"
               >
+                {loadingStates.createPermission && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
                 Save Permission
               </button>
             </div>
@@ -1547,6 +1637,17 @@ const UserManagementList = () => {
           variant="danger"
         />
       )}
+
+      {/* DialogueBox for API Success/Error Messages */}
+      <DialogueBox
+        isOpen={dialogueBox.isOpen}
+        onClose={closeDialogue}
+        type={dialogueBox.type}
+        title={dialogueBox.title}
+        message={dialogueBox.message}
+        autoClose={true}
+        autoCloseDelay={3000}
+      />
     </div>
   );
 };
