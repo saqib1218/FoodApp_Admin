@@ -30,6 +30,7 @@ export const PERMISSIONS = {
 
   // Kitchen Management
   KITCHEN_VIEW: 'admin.kitchen.view',
+  KITCHEN_LIST_VIEW: 'admin.kitchen.list.view',
   KITCHEN_EDIT: 'admin.kitchen.edit',
 
   // Partner Management

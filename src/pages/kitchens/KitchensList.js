@@ -11,13 +11,13 @@ import {
   ChevronUpIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
-// TODO: Replace with RTK Query hooks when migrating API calls
-import { mockKitchens } from '../../data/kitchens/mockKitchens';
+import { useGetKitchensQuery } from '../../store/api/modules/kitchens/kitchensApi';
+import { usePermissions } from '../../hooks/usePermissions';
+import { PERMISSIONS } from '../../contexts/PermissionRegistry';
 
 const KitchensList = () => {
-  const [kitchens, setKitchens] = useState([]);
+  const { hasPermission } = usePermissions();
   const [filteredKitchens, setFilteredKitchens] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     city: '',
@@ -38,46 +38,45 @@ const KitchensList = () => {
     direction: 'asc'
   });
 
-  // Load kitchens and filter options on component mount
-  useEffect(() => {
-    const loadData = () => {
-      try {
-        setIsLoading(true);
-        // Use static mock data
-        setKitchens(mockKitchens);
-        setFilteredKitchens(mockKitchens);
-        
-        // Generate filter options from mock data
-        const cities = [...new Set(mockKitchens.map(kitchen => kitchen.city))];
-        const cuisines = [...new Set(mockKitchens.map(kitchen => kitchen.cuisine))];
-        const statuses = [...new Set(mockKitchens.map(kitchen => kitchen.status))];
-        
-        setFilterOptions({
-          cities,
-          cuisines,
-          statuses
-        });
-      } catch (error) {
-        console.error('Error loading kitchens:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Check if user has permission to view kitchen list
+  const canViewKitchens = hasPermission(PERMISSIONS.KITCHEN_LIST_VIEW);
 
-    loadData();
-  }, []);
+  // RTK Query to fetch kitchens
+  const {
+    data: kitchensResponse,
+    isLoading,
+    error,
+    refetch
+  } = useGetKitchensQuery({}, {
+    skip: !canViewKitchens
+  });
+
+  const kitchens = kitchensResponse?.data || [];
+
+  // Load filter options when kitchens data is available
+  useEffect(() => {
+    if (kitchens.length > 0) {
+      // Generate filter options from API data
+      const statuses = [...new Set(kitchens.map(kitchen => kitchen.status))];
+      
+      setFilterOptions({
+        cities: [], // Not available in current API response
+        cuisines: [], // Not available in current API response
+        statuses
+      });
+      
+      // Set initial filtered kitchens
+      setFilteredKitchens(kitchens);
+    }
+  }, [kitchens]);
 
   // Apply filters when search term or filters change
   useEffect(() => {
-    const applyFilters = async () => {
+    const applyFilters = () => {
       // Check if any filters are actually applied
       const hasFilters = searchTerm.trim() !== '' || 
-                        filters.city !== '' || 
-                        filters.cuisine !== '' || 
                         filters.status !== '' || 
-                        filters.phoneNumber !== '' || 
-                        filters.kitchenId !== '' || 
-                        filters.orderId !== '';
+                        filters.kitchenId !== '';
 
       // If no filters are applied, show all kitchens
       if (!hasFilters) {
@@ -85,7 +84,6 @@ const KitchensList = () => {
         return;
       }
 
-      setIsLoading(true);
       try {
         // Client-side filtering logic
         let filtered = [...kitchens];
@@ -94,18 +92,8 @@ const KitchensList = () => {
         if (searchTerm.trim()) {
           filtered = filtered.filter(kitchen => 
             kitchen.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            kitchen.owner.toLowerCase().includes(searchTerm.toLowerCase())
+            (kitchen.tagline && kitchen.tagline.toLowerCase().includes(searchTerm.toLowerCase()))
           );
-        }
-
-        // Apply city filter
-        if (filters.city) {
-          filtered = filtered.filter(kitchen => kitchen.city === filters.city);
-        }
-
-        // Apply cuisine filter
-        if (filters.cuisine) {
-          filtered = filtered.filter(kitchen => kitchen.cuisine === filters.cuisine);
         }
 
         // Apply status filter
@@ -120,14 +108,9 @@ const KitchensList = () => {
           );
         }
 
-        // Note: phoneNumber and orderId filters are not applicable to mock data structure
-        // but keeping the structure for future API integration
-
         setFilteredKitchens(filtered);
       } catch (error) {
         console.error('Error filtering kitchens:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -140,6 +123,13 @@ const KitchensList = () => {
   // Helper function to get status badge
   const getStatusBadge = (status) => {
     switch (status) {
+      case 'approved':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircleIcon className="mr-1 h-4 w-4" />
+            Approved
+          </span>
+        );
       case 'active':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -238,6 +228,36 @@ const KitchensList = () => {
     });
   };
 
+  // Show unauthorized message if user doesn't have permission
+  if (!canViewKitchens) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <h3 className="text-lg font-medium text-neutral-900 mb-2">Access Denied</h3>
+          <p className="text-neutral-500">You don't have permission to view the kitchen list.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error message if API call failed
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <h3 className="text-lg font-medium text-neutral-900 mb-2">Error Loading Kitchens</h3>
+          <p className="text-neutral-500 mb-4">Failed to load kitchen data. Please try again.</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -258,7 +278,7 @@ const KitchensList = () => {
             <input
               type="text"
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="Search by kitchen name or owner..."
+              placeholder="Search by kitchen name or tagline..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -427,7 +447,7 @@ const KitchensList = () => {
                       <div className="text-sm font-medium text-primary-600">{kitchen.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-neutral-700">{kitchen.owner}</div>
+                      <div className="text-sm text-neutral-700">null</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(kitchen.status)}

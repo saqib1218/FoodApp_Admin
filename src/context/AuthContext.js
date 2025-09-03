@@ -187,7 +187,7 @@ export const AuthProvider = ({ children }) => {
       // Fetch user permissions immediately after successful login
       console.log('Login successful, fetching user permissions...');
       try {
-        const permissionsResponse = await axios.get(`${apiBaseUrl}/admin/permissions/by-user/${decodedToken.userId}`);
+        const permissionsResponse = await axios.get(`${apiBaseUrl}/admin/users/${decodedToken.userId}/permissions`);
         console.log('Permissions API Response:', permissionsResponse.data);
         
         if (permissionsResponse.data?.data?.permissions) {

@@ -10,7 +10,7 @@ import ConfirmationModal from '../../../components/ConfirmationModal';
 
 // Import tab components
 import KitchenInfoTab from './KitchenInfoTab';
-import KitchenUsersTab from './KitchenUsersTab';
+import KitchenPartnersTab from './KitchenPartnersTab';
 import KitchenMediaTab from './KitchenMediaTab';
 import KitchenAddressesTab from './KitchenAddressesTab';
 import KitchenAvailabilityTab from './KitchenAvailabilityTab';
@@ -32,7 +32,7 @@ const KitchenDetail = () => {
   // State variables
   const [kitchen, setKitchen] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState('partners');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [statusComment, setStatusComment] = useState('');
@@ -146,7 +146,7 @@ const KitchenDetail = () => {
 
   // Map tabs to components
   const TABS = {
-    users: <KitchenUsersTab />,
+    partners: <KitchenPartnersTab />,
     media: <KitchenMediaTab />,
     addresses: <KitchenAddressesTab />,
     availability: <KitchenAvailabilityTab />,
@@ -247,14 +247,14 @@ const KitchenDetail = () => {
         <div className="border-b border-neutral-200 mb-8">
           <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => handleTabChange('users')}
+              onClick={() => handleTabChange('partners')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'users'
+                activeTab === 'partners'
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
               }`}
             >
-              Kitchen Users
+              Kitchen partners
             </button>
             
             <button

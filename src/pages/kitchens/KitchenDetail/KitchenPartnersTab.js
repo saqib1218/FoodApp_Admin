@@ -7,7 +7,7 @@ import { KitchenContext } from './index';
 import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
-const KitchenUsersTab = () => {
+const KitchenPartnersTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
   const { hasPermission } = useAuth();
   
@@ -383,7 +383,7 @@ const KitchenUsersTab = () => {
           <div>
             <h3 className="text-lg font-medium text-neutral-900">Kitchen Partners</h3>
             <p className="mt-1 text-sm text-neutral-500">
-              Manage users associated with this kitchen.
+              Manage partners associated with this kitchen.
             </p>
           </div>
           <button
@@ -398,7 +398,7 @@ const KitchenUsersTab = () => {
 
       {kitchenUsers.length === 0 ? (
         <div className="text-center py-12 bg-neutral-50 rounded-lg">
-          <p className="text-neutral-500">No users found for this kitchen.</p>
+          <p className="text-neutral-500">No partners found for this kitchen.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -1053,4 +1053,4 @@ const KitchenUsersTab = () => {
   );
 };
 
-export default KitchenUsersTab;
+export default KitchenPartnersTab;
