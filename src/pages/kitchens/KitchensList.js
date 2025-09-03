@@ -14,10 +14,12 @@ import {
 import { useGetKitchensQuery } from '../../store/api/modules/kitchens/kitchensApi';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../contexts/PermissionRegistry';
+import PaginationUi from '../../components/PaginationUi';
 
 const KitchensList = () => {
   const { hasPermission } = usePermissions();
   const [filteredKitchens, setFilteredKitchens] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     city: '',
@@ -41,17 +43,27 @@ const KitchensList = () => {
   // Check if user has permission to view kitchen list
   const canViewKitchens = hasPermission(PERMISSIONS.KITCHEN_LIST_VIEW);
 
-  // RTK Query to fetch kitchens
+  // RTK Query to fetch kitchens with pagination
   const {
     data: kitchensResponse,
     isLoading,
     error,
     refetch
-  } = useGetKitchensQuery({}, {
+  } = useGetKitchensQuery({
+    page: currentPage
+  }, {
     skip: !canViewKitchens
   });
 
   const kitchens = kitchensResponse?.data || [];
+  const paginationMeta = kitchensResponse?.meta?.pagination;
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Reset to top of page when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Load filter options when kitchens data is available
   useEffect(() => {
@@ -447,7 +459,7 @@ const KitchensList = () => {
                       <div className="text-sm font-medium text-primary-600">{kitchen.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-neutral-700">null</div>
+                      <div className="text-sm text-neutral-700">{kitchen.owner?.name || 'No Owner'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(kitchen.status)}
@@ -465,6 +477,15 @@ const KitchensList = () => {
               </tbody>
             </table>
           </div>
+        )}
+        
+        {/* Pagination */}
+        {paginationMeta && paginationMeta.totalPages > 1 && (
+          <PaginationUi
+            currentPage={currentPage}
+            totalPages={paginationMeta.totalPages}
+            onPageChange={handlePageChange}
+          />
         )}
       </div>
     </div>
