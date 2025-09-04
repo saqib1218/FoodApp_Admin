@@ -2,11 +2,11 @@ import React, { useState, useEffect, createContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
-// TODO: Replace with RTK Query hooks when migrating API calls
-import { mockKitchenService } from '../../../utils/mockServiceHelpers';
+import { useGetKitchenByIdQuery } from '../../../store/api/modules/kitchens/kitchensApi';
 import { useAuth } from '../../../hooks/useAuth';
 import PermissionGate from '../../../components/PermissionGate';
 import ConfirmationModal from '../../../components/ConfirmationModal';
+import { PERMISSIONS } from '../../../contexts/PermissionRegistry';
 
 // Import tab components
 import KitchenInfoTab from './KitchenInfoTab';
@@ -29,30 +29,22 @@ const KitchenDetail = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   
+  // Check permission first
+  const canViewKitchenDetails = hasPermission(PERMISSIONS.KITCHEN_DETAIL_VIEW);
+  
+  // RTK Query to fetch kitchen data - only if user has permission
+  const { data: kitchenResponse, isLoading, error } = useGetKitchenByIdQuery(id, {
+    skip: !canViewKitchenDetails
+  });
+  
   // State variables
-  const [kitchen, setKitchen] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('partners');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [statusComment, setStatusComment] = useState('');
 
-  // Fetch kitchen data
-  useEffect(() => {
-    const fetchKitchenData = async () => {
-      try {
-        setIsLoading(true);
-        const data = await mockKitchenService.getKitchenById(id);
-        setKitchen(data);
-      } catch (err) {
-        console.error('Failed to load kitchen:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchKitchenData();
-  }, [id]);
+  // Extract kitchen data from API response
+  const kitchen = kitchenResponse?.data || null;
 
   // Tab navigation handler
   const handleTabChange = (tab) => {
@@ -68,15 +60,12 @@ const KitchenDetail = () => {
 
   const confirmStatusUpdate = async () => {
     try {
-      setIsLoading(true);
-      const updatedKitchen = await mockKitchenService.updateKitchenStatus(id, newStatus, statusComment);
-      setKitchen(updatedKitchen);
+      // TODO: Implement status update API call when available
+      console.log('Status update requested:', { id, newStatus, statusComment });
       setShowStatusModal(false);
       setStatusComment('');
     } catch (err) {
       console.error('Failed to update kitchen status:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -119,10 +108,41 @@ const KitchenDetail = () => {
     }
   };
 
+  // Show unauthorized message if user doesn't have permission
+  if (!canViewKitchenDetails) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <h3 className="text-lg font-medium text-neutral-900 mb-2">Access Denied</h3>
+          <p className="text-neutral-500">You don't have permission to view the kitchen details.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <h3 className="text-lg font-medium text-neutral-900">Error loading kitchen</h3>
+        <p className="mt-2 text-neutral-600">
+          {error?.data?.message || 'Failed to load kitchen data. Please try again.'}
+        </p>
+        <div className="mt-6">
+          <button
+            onClick={() => navigate('/kitchens')}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700"
+          >
+            Back to Kitchens
+          </button>
+        </div>
       </div>
     );
   }
@@ -159,7 +179,7 @@ const KitchenDetail = () => {
   };
 
   return (
-    <KitchenContext.Provider value={{ kitchen, setKitchen, id }}>
+    <KitchenContext.Provider value={{ kitchen, setKitchen: () => {}, id }}>
       <div className="bg-white shadow rounded-xl overflow-hidden">
         {/* Header */}
         <div className="px-6 py-5 border-b border-neutral-200 flex justify-between items-center">
@@ -196,12 +216,12 @@ const KitchenDetail = () => {
             <div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Kitchen Name</h3>
-                <p className="mt-1 text-neutral-900">{kitchen.name}</p>
+                <p className="mt-1 text-neutral-900">{kitchen.name || 'N/A'}</p>
               </div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Registration Date</h3>
                 <p className="mt-1 text-neutral-900">
-                  {new Date(kitchen.registrationDate).toLocaleDateString()}
+                  {kitchen.createdAt ? new Date(kitchen.createdAt).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
               <div className="mb-4">
@@ -218,7 +238,7 @@ const KitchenDetail = () => {
             <div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Owner</h3>
-                <p className="mt-1 text-neutral-900">Asim</p>
+                <p className="mt-1 text-neutral-900">{kitchen.owner || 'N/A'}</p>
               </div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Status</h3>
@@ -226,18 +246,13 @@ const KitchenDetail = () => {
               </div>
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-500">Contact</h3>
-                <p className="mt-1 text-neutral-900">03406754766</p>
+                <p className="mt-1 text-neutral-900">{kitchen.contact || 'N/A'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-neutral-500">Cuisine</h3>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Pakistani
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Fast Food
-                  </span>
-                </div>
+                <h3 className="text-sm font-medium text-neutral-500">Logo Available</h3>
+                <p className="mt-1 text-neutral-900">
+                  {kitchen.isLogoAvailable ? 'Yes' : 'No'}
+                </p>
               </div>
             </div>
           </div>

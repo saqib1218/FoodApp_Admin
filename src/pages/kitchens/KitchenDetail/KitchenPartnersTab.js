@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-// TODO: Replace with RTK Query hooks when migrating API calls
-import { mockKitchenUsers } from '../../../data/kitchens/mockKitchenUsers';
+import { useGetKitchenPartnersQuery } from '../../../store/api/modules/kitchens/kitchensApi';
 import { useAuth } from '../../../hooks/useAuth';
 import { PermissionButton } from '../../../components/PermissionGate';
 import { KitchenContext } from './index';
+import { PERMISSIONS } from '../../../contexts/PermissionRegistry';
 import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
@@ -11,9 +11,18 @@ const KitchenPartnersTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
   const { hasPermission } = useAuth();
   
+  // Check permission first
+  const canViewKitchenPartners = hasPermission(PERMISSIONS.KITCHEN_PARTNER_LIST_VIEW);
+  
+  // RTK Query to fetch kitchen partners data - only if user has permission
+  const { data: partnersResponse, isLoading: isLoadingUsers, error } = useGetKitchenPartnersQuery(kitchenId, {
+    skip: !canViewKitchenPartners || !kitchenId
+  });
+  
+  // Extract partners data from API response
+  const kitchenUsers = partnersResponse?.data || [];
+  
   // State variables
-  const [kitchenUsers, setKitchenUsers] = useState([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [newStatus, setNewStatus] = useState('');
@@ -48,23 +57,7 @@ const KitchenPartnersTab = () => {
     status: ''
   });
 
-  // Fetch kitchen users
-  useEffect(() => {
-    const fetchKitchenUsers = () => {
-      try {
-        setIsLoadingUsers(true);
-        // Filter users for current kitchen
-        const filteredUsers = mockKitchenUsers.filter(user => user.kitchenId === parseInt(kitchenId));
-        setKitchenUsers(filteredUsers);
-      } catch (err) {
-        console.error('Failed to load kitchen users:', err);
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
-
-    fetchKitchenUsers();
-  }, [kitchenId]);
+  // Remove the early return - we'll handle permission check in the table section only
 
   // Generate random 5-digit code
   const generateInviteCode = () => {
@@ -91,18 +84,8 @@ const KitchenPartnersTab = () => {
     setShowInviteModal(false);
     setShowCodeModal(true);
 
-    // Add user to table with pending status
-    const newUser = {
-      id: Date.now(), // Temporary ID
-      name: inviteName,
-      phone: invitePhone,
-      role: 'Staff',
-      status: 'pending',
-      pinBlocked: false,
-      trustedDevices: []
-    };
-
-    setKitchenUsers([...kitchenUsers, newUser]);
+    // TODO: Implement API call to invite user
+    console.log('Invite user:', { name: inviteName, phone: invitePhone });
   };
 
   // Copy code to clipboard
@@ -159,12 +142,8 @@ const KitchenPartnersTab = () => {
       return;
     }
     
-    // Update user in local state
-    setKitchenUsers(kitchenUsers.map(user => 
-      user.id === selectedUser.id 
-        ? { ...user, ...editUserForm }
-        : user
-    ));
+    // TODO: Implement API call to update user
+    console.log('Update user:', { userId: selectedUser.id, ...editUserForm });
     
     setShowEditUserModal(false);
     setSelectedUser(null);
@@ -173,8 +152,8 @@ const KitchenPartnersTab = () => {
 
   // Handle confirm delete user
   const handleConfirmDeleteUser = () => {
-    // Remove user from local state
-    setKitchenUsers(kitchenUsers.filter(user => user.id !== selectedUser.id));
+    // TODO: Implement API call to delete user
+    console.log('Delete user:', { userId: selectedUser.id, comment: deleteComment });
     setShowDeleteConfirmModal(false);
     setSelectedUser(null);
     setDeleteComment('');
@@ -187,12 +166,8 @@ const KitchenPartnersTab = () => {
       return;
     }
     
-    // Update user in local state
-    setKitchenUsers(kitchenUsers.map(user => 
-      user.id === selectedUser.id 
-        ? { ...user, ...editUserForm }
-        : user
-    ));
+    // TODO: Implement API call to update user
+    console.log('Update user:', { userId: selectedUser.id, ...editUserForm, comment: updateComment });
     
     // Close all modals and reset state
     setShowUpdateConfirmModal(false);
@@ -212,26 +187,21 @@ const KitchenPartnersTab = () => {
 
   const confirmStatusUpdate = async () => {
     if (!statusComment.trim()) {
-      alert('Please provide a comment for this status change');
+      alert('Please provide a comment for status update');
       return;
     }
 
     try {
-      setIsLoadingUsers(true);
-      // TODO: Replace with RTK Query
-      console.warn("TODO: Replace with RTK Query");
-      
-      // Refresh users list
-      // TODO: Replace with RTK Query
-      console.warn("TODO: Replace with RTK Query");
-      const users = [];
-      setKitchenUsers(users);
+      // TODO: Implement API call to update user status
+      console.log('Update user status:', { 
+        userId: selectedUser.id, 
+        status: newStatus, 
+        comment: statusComment 
+      });
       
       setShowStatusModal(false);
     } catch (err) {
       console.error('Failed to update user status:', err);
-    } finally {
-      setIsLoadingUsers(false);
     }
   };
 
@@ -249,21 +219,15 @@ const KitchenPartnersTab = () => {
     }
 
     try {
-      setIsLoadingUsers(true);
-      // TODO: Replace with RTK Query
-      console.warn("TODO: Replace with RTK Query");
-      
-      // Refresh users list
-      // TODO: Replace with RTK Query
-      console.warn("TODO: Replace with RTK Query");
-      const users = [];
-      setKitchenUsers(users);
+      // TODO: Implement API call to unblock PIN
+      console.log('Unblock PIN:', { 
+        userId: selectedUser.id, 
+        comment: statusComment 
+      });
       
       setShowUnblockPinModal(false);
     } catch (err) {
-      console.error('Failed to unblock user PIN:', err);
-    } finally {
-      setIsLoadingUsers(false);
+      console.error('Failed to unblock PIN:', err);
     }
   };
 
@@ -282,21 +246,16 @@ const KitchenPartnersTab = () => {
     }
 
     try {
-      setIsLoadingUsers(true);
-      // TODO: Replace with RTK Query
-      console.warn("TODO: Replace with RTK Query");
-      
-      // Refresh users list
-      // TODO: Replace with RTK Query
-      console.warn("TODO: Replace with RTK Query");
-      const users = [];
-      setKitchenUsers(users);
+      // TODO: Implement API call to delete token
+      console.log('Delete token:', { 
+        userId: selectedUser.id, 
+        tokenId: selectedToken.id,
+        comment: statusComment 
+      });
       
       setShowDeleteTokenModal(false);
     } catch (err) {
       console.error('Failed to delete user token:', err);
-    } finally {
-      setIsLoadingUsers(false);
     }
   };
 
@@ -306,15 +265,11 @@ const KitchenPartnersTab = () => {
     setShowUserDocumentsModal(true);
     
     try {
-      setIsLoadingDocuments(true);
-      // TODO: Replace with RTK Query
-      console.warn("TODO: Replace with RTK Query");
-      const documents = [];
-      setUserDocuments(documents);
+      // TODO: Implement API call to load user documents
+      console.log('Load user documents:', { userId: user.id });
+      setUserDocuments([]);
     } catch (err) {
       console.error('Failed to load user documents:', err);
-    } finally {
-      setIsLoadingDocuments(false);
     }
   };
 
@@ -396,7 +351,14 @@ const KitchenPartnersTab = () => {
         </div>
       </div>
 
-      {kitchenUsers.length === 0 ? (
+      {!canViewKitchenPartners ? (
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-neutral-900 mb-2">Access Denied</h3>
+            <p className="text-neutral-500">You don't have permission to access the list of the partners.</p>
+          </div>
+        </div>
+      ) : kitchenUsers.length === 0 ? (
         <div className="text-center py-12 bg-neutral-50 rounded-lg">
           <p className="text-neutral-500">No partners found for this kitchen.</p>
         </div>
@@ -426,39 +388,37 @@ const KitchenPartnersTab = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-neutral-200">
-              {kitchenUsers.map((user) => (
-                <tr key={user.id}>
+              {kitchenUsers.map((user, index) => (
+                <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-neutral-200 flex items-center justify-center">
-                        {user.name.charAt(0)}
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div className="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
+                          {user.name ? user.name.charAt(0) : 'N'}
+                        </div>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-neutral-900">{user.name}</div>
-                        <div className="text-sm text-neutral-500">{user.mobileNumber || user.email}</div>
+                        <div className="text-sm font-medium text-neutral-900">{user.name || 'N/A'}</div>
+                        <div className="text-sm text-neutral-500">{user.mobilenumber || user.email || 'N/A'}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-neutral-900">{user.role}</div>
+                    <div className="text-sm text-neutral-900">
+                      {user.roles && user.roles.length > 0 ? user.roles.join(', ') : 'N/A'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getUserStatusBadge(user.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {user.pinBlocked ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Blocked
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
-                      </span>
-                    )}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      N/A
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-neutral-900">
-                      {getRelativeTime(user.lastActive || new Date(Date.now() - Math.random() * 7200000))}
+                      {user.joinedAt ? getRelativeTime(new Date(user.joinedAt)) : 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

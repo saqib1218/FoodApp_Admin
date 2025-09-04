@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { PencilIcon, XMarkIcon, PlusIcon, EyeIcon, TrashIcon } from '@heroicons/react/24/outline';
-// TODO: Replace with RTK Query hooks when migrating API calls
-import kitchenAddresses from '../../../data/kitchens/kitchenAddresses';
+import { useGetKitchenAddressesQuery } from '../../../store/api/modules/kitchens/kitchensApi';
 import { useAuth } from '../../../hooks/useAuth';
-
+import { PERMISSIONS } from '../../../contexts/PermissionRegistry';
 import { KitchenContext } from './index';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
@@ -11,6 +10,17 @@ const KitchenAddressesTab = () => {
   const { hasPermission } = useAuth();
   const { kitchen } = useContext(KitchenContext);
   const kitchenId = kitchen?.id;
+  
+  // Check permission for viewing kitchen addresses
+  const canViewKitchenAddresses = hasPermission(PERMISSIONS.KITCHEN_ADDRESS_LIST_VIEW);
+  
+  // RTK Query to fetch kitchen addresses data - only if user has permission
+  const { data: addressesResponse, isLoading: isLoadingAddresses, error } = useGetKitchenAddressesQuery(kitchenId, {
+    skip: !canViewKitchenAddresses || !kitchenId
+  });
+  
+  // Extract addresses data from API response
+  const addresses = addressesResponse?.data || [];
 
   // State variables
   const [showModal, setShowModal] = useState(false);
@@ -35,20 +45,7 @@ const KitchenAddressesTab = () => {
     type: 'primary'
   });
 
-  // State for addresses data
-  const [addresses, setAddresses] = useState([]);
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-
-  // Load addresses data on component mount
-  useEffect(() => {
-    if (kitchenId) {
-      setIsLoadingAddresses(true);
-      // Filter addresses for current kitchen
-      const filteredAddresses = kitchenAddresses.filter(addr => addr.kitchenId === kitchenId.toString());
-      setAddresses(filteredAddresses);
-      setIsLoadingAddresses(false);
-    }
-  }, [kitchenId]);
+  // Remove the old state and useEffect - now using RTK Query
 
   // Handle add address
   const handleAddAddress = () => {
@@ -97,8 +94,8 @@ const KitchenAddressesTab = () => {
   const handleConfirmDeleteAddress = () => {
     if (!selectedAddress) return;
 
-    // Update local state directly (no API call with mock data)
-    setAddresses(addresses.filter(address => address.id !== selectedAddress.id));
+    // TODO: Implement API call to delete address
+    console.log('Delete address:', { addressId: selectedAddress.id, comment: deleteComment });
     
     setShowDeleteModal(false);
     setSelectedAddress(null);
@@ -109,12 +106,8 @@ const KitchenAddressesTab = () => {
   const handleConfirmUpdateAddress = () => {
     if (!selectedAddress) return;
 
-    // Update local state directly (no API call with mock data)
-    setAddresses(addresses.map(address => 
-      address.id === selectedAddress.id 
-        ? { ...address, ...addressForm }
-        : address
-    ));
+    // TODO: Implement API call to update address
+    console.log('Update address:', { addressId: selectedAddress.id, addressData: addressForm, comment: updateComment });
     
     setShowUpdateConfirmModal(false);
     setShowAddressModal(false);
@@ -182,7 +175,8 @@ const KitchenAddressesTab = () => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        setAddresses([...addresses, newAddress]);
+        // TODO: Implement API call to add address
+        console.log('Add address:', { kitchenId, addressData: addressForm, comment: confirmComment });
       } else {
         // Update existing address in local state (mock implementation)
         const updatedAddresses = addresses.map(addr => 
@@ -198,7 +192,8 @@ const KitchenAddressesTab = () => {
               }
             : addr
         );
-        setAddresses(updatedAddresses);
+        // TODO: Implement API call to update address
+        console.log('Update address:', { addressId: selectedAddress.id, addressData: addressForm });
       }
       
       setShowConfirmModal(false);
@@ -266,7 +261,14 @@ const KitchenAddressesTab = () => {
         </button>
       </div>
 
-      {kitchenAddresses.length === 0 ? (
+      {!canViewKitchenAddresses ? (
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-neutral-900 mb-2">Access Denied</h3>
+            <p className="text-neutral-500">You don't have permission to access the list of the addresses.</p>
+          </div>
+        </div>
+      ) : addresses.length === 0 ? (
         <div className="text-center py-12 bg-neutral-50 rounded-lg">
           <p className="text-neutral-500">No addresses found for this kitchen.</p>
         </div>
@@ -296,19 +298,19 @@ const KitchenAddressesTab = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-neutral-200">
-              {kitchenAddresses.map((address) => (
+              {addresses.map((address) => (
                 <tr key={address.id}>
                   <td className="px-6 py-4 whitespace-normal">
-                    <div className="text-sm text-neutral-900">{address.fullAddress}</div>
+                    <div className="text-sm text-neutral-900">{address.addressName || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-neutral-900">{address.city}</div>
+                    <div className="text-sm text-neutral-900">{address.city || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-neutral-900">{address.cityZone}</div>
+                    <div className="text-sm text-neutral-900">{address.zone || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-neutral-900">{address.nearestLocation}</div>
+                    <div className="text-sm text-neutral-900">{address.nearestLocation || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(address.status || 'active')}

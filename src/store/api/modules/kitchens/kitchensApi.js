@@ -78,6 +78,12 @@ export const kitchensApi = apiSlice.injectEndpoints({
       query: () => '/admin/kitchens/filter-options',
       providesTags: ['Kitchen'],
     }),
+
+    // Kitchen Partners
+    getKitchenPartners: builder.query({
+      query: (kitchenId) => `/admin/kitchens/${kitchenId}/partners`,
+      providesTags: (result, error, arg) => [{ type: 'KitchenPartner', id: arg }],
+    }),
     
     // Kitchen Users Management
     getKitchenUsers: builder.query({
@@ -230,7 +236,7 @@ export const kitchensApi = apiSlice.injectEndpoints({
     
     // Kitchen Addresses Management
     getKitchenAddresses: builder.query({
-      query: (kitchenId) => `/admin/kitchens/${kitchenId}/addresses`,
+      query: (kitchenId) => `/admin/kitchens/${kitchenId}/address`,
       providesTags: (result, error, arg) => [
         { type: 'KitchenAddress', id: arg },
         'KitchenAddress'
@@ -330,6 +336,7 @@ export const {
   useApproveKitchenMutation,
   useSuspendKitchenMutation,
   useGetKitchenFilterOptionsQuery,
+  useGetKitchenPartnersQuery,
   
   // Kitchen Users
   useGetKitchenUsersQuery,

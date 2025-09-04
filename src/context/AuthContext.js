@@ -200,13 +200,21 @@ export const AuthProvider = ({ children }) => {
           TokenStorage.setUserInfo(userInfo);
           
           console.log('Permissions loaded successfully:', permissionKeys);
+          
+          // Update state with fetched permissions
+          setCurrentUser(userInfo);
+          setIsAuthenticated(true);
+          setUserRole(decodedToken.role);
+          setUserPermissions(permissionKeys); // Use fetched permission keys
+          
+          return { success: true, userInfo };
         }
       } catch (permissionError) {
         console.error('Failed to fetch permissions during login:', permissionError);
         // Continue with login even if permissions fail - they can be loaded later
       }
       
-      // Update state after permissions are loaded (or attempted)
+      // Update state after permissions are loaded (or attempted) - fallback if permissions fetch failed
       setCurrentUser(userInfo);
       setIsAuthenticated(true);
       setUserRole(decodedToken.role);
@@ -305,25 +313,28 @@ export const AuthProvider = ({ children }) => {
             return;
           }
           
-          // Restore session from decoded token
-          const userInfo = {
-            id: decodedToken.userId,
-            name: decodedToken.name,
-            email: decodedToken.email,
-            mobileNumber: decodedToken.mobileNumber,
-            role: decodedToken.role,
-            isActive: decodedToken.isActive,
-            permissions: decodedToken.permissions || []
-          };
+          // Try to get stored user info first (which may have fetched permissions)
+          let userInfo = TokenStorage.getUserInfo();
           
-          // Update stored user info in case it's missing
-          TokenStorage.setUserInfo(userInfo);
+          if (!userInfo) {
+            // Fallback to decoded token if no stored user info
+            userInfo = {
+              id: decodedToken.userId,
+              name: decodedToken.name,
+              email: decodedToken.email,
+              mobileNumber: decodedToken.mobileNumber,
+              role: decodedToken.role,
+              isActive: decodedToken.isActive,
+              permissions: decodedToken.permissions || []
+            };
+            TokenStorage.setUserInfo(userInfo);
+          }
           
-          // Restore session state
+          // Restore session state - use fetched permissions if available
           setCurrentUser(userInfo);
           setIsAuthenticated(true);
           setUserRole(decodedToken.role);
-          setUserPermissions(decodedToken.permissions || []);
+          setUserPermissions(userInfo.permissionKeys || decodedToken.permissions || []);
           
           // Set axios header
           axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
