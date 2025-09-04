@@ -29,11 +29,12 @@ export const PERMISSIONS = {
   DASHBOARD_VIEW: 'admin.dashboard.view',
 
   // Kitchen Management
-  KITCHEN_VIEW: 'admin.kitchen.view',
+  KITCHEN_VIEW: 'admin.kitchen.view', // Kitchen permissions
   KITCHEN_LIST_VIEW: 'admin.kitchen.list.view',
   KITCHEN_DETAIL_VIEW: 'admin.kitchen.detail.view',
   KITCHEN_PARTNER_LIST_VIEW: 'admin.kitchen.partner.list.view',
   KITCHEN_ADDRESS_LIST_VIEW: 'admin.kitchen.address.list.view',
+  KITCHEN_AVAILABILITY_VIEW: 'admin.kitchen.availability.view',
   KITCHEN_EDIT: 'admin.kitchen.edit',
 
   // Partner Management

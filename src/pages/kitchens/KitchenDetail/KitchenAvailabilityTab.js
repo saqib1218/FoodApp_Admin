@@ -1,18 +1,28 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { XMarkIcon, PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-// TODO: Replace with RTK Query hooks when migrating API calls
-import { mockKitchenAvailabilityService } from '../../../utils/mockServiceHelpers';
+import { useGetKitchenAvailabilityQuery } from '../../../store/api/modules/kitchens/kitchensApi';
 import { useAuth } from '../../../hooks/useAuth';
+import { PERMISSIONS } from '../../../contexts/PermissionRegistry';
 import { KitchenContext } from './index';
 import PermissionGate, { PermissionButton } from '../../../components/PermissionGate';
 
 const KitchenAvailabilityTab = () => {
-  const { id: kitchenId } = useContext(KitchenContext);
+  const { kitchen } = useContext(KitchenContext);
+  const kitchenId = kitchen?.id;
   const { hasPermission } = useAuth();
+  
+  // Check permission for viewing kitchen availability
+  const canViewKitchenAvailability = hasPermission(PERMISSIONS.KITCHEN_AVAILABILITY_VIEW);
+  
+  // RTK Query to fetch kitchen availability data - only if user has permission
+  const { data: availabilityResponse, isLoading, error } = useGetKitchenAvailabilityQuery(kitchenId, {
+    skip: !canViewKitchenAvailability || !kitchenId
+  });
+  
+  // Extract availability data from API response
+  const availabilityData = availabilityResponse?.data || [];
 
   // State variables
-  const [availabilitySettings, setAvailabilitySettings] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingDay, setEditingDay] = useState(null);
   const [editingMeal, setEditingMeal] = useState(null);
@@ -24,52 +34,58 @@ const KitchenAvailabilityTab = () => {
 
   // Days of the week
   const daysOfWeek = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+    { id: 'Mon', name: 'Monday' },
+    { id: 'Tue', name: 'Tuesday' },
+    { id: 'Wed', name: 'Wednesday' },
+    { id: 'Thu', name: 'Thursday' },
+    { id: 'Fri', name: 'Friday' },
+    { id: 'Sat', name: 'Saturday' },
+    { id: 'Sun', name: 'Sunday' }
   ];
 
-  // Meal periods
+  // Meal periods (slots)
   const mealPeriods = [
-    { id: 'breakfast', name: 'Breakfast', defaultStart: '08:00', defaultEnd: '11:00' },
-    { id: 'lunch', name: 'Lunch', defaultStart: '12:00', defaultEnd: '15:00' },
-    { id: 'dinner', name: 'Dinner', defaultStart: '18:00', defaultEnd: '21:00' }
+    { id: 1, name: 'breakfast', label: 'Breakfast' },
+    { id: 2, name: 'lunch', label: 'Lunch' },
+    { id: 3, name: 'dinner', label: 'Dinner' },
+    { id: 4, name: 'iftar', label: 'Iftar' },
+    { id: 5, name: 'full_day', label: 'Full Day' }
   ];
 
-  // Fetch availability settings
-  useEffect(() => {
-    const fetchAvailabilitySettings = async () => {
-      try {
-        setIsLoading(true);
-        const settings = await mockKitchenAvailabilityService.getKitchenAvailability(kitchenId);
-        setAvailabilitySettings(settings);
-      } catch (err) {
-        console.error('Failed to load kitchen availability settings:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Helper function to get availability data for a specific day and slot
+  const getAvailabilityForDaySlot = (dayId, slotId) => {
+    return availabilityData.find(item => 
+      item.day.id === dayId && item.slot.id === slotId
+    );
+  };
 
-    fetchAvailabilitySettings();
-  }, [kitchenId]);
+  // Format time for display
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+    try {
+      const [hours, minutes] = timeString.split(':');
+      const time = new Date();
+      time.setHours(parseInt(hours, 10));
+      time.setMinutes(parseInt(minutes, 10));
+      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (err) {
+      return timeString;
+    }
+  };
 
   // Handle edit time slot
-  const handleEditTimeSlot = (day, meal) => {
-    if (!hasPermission('edit_kitchen')) return;
+  const handleEditTimeSlot = (day, slot) => {
+    setEditingDay(day);
+    setEditingMeal(slot);
     
-    const daySettings = availabilitySettings?.[day.toLowerCase()] || {};
-    const mealSettings = daySettings[meal.id] || { 
-      isAvailable: false, 
-      startTime: meal.defaultStart, 
-      endTime: meal.defaultEnd 
-    };
+    const availability = getAvailabilityForDaySlot(day.id, slot.id);
     
     setFormData({
-      isAvailable: mealSettings.isAvailable || false,
-      startTime: mealSettings.startTime || meal.defaultStart,
-      endTime: mealSettings.endTime || meal.defaultEnd
+      isAvailable: availability?.isAvailable || false,
+      startTime: availability?.customStartTime || availability?.slot?.defaultStartTime || '08:00',
+      endTime: availability?.customEndTime || availability?.slot?.defaultEndTime || '10:00'
     });
     
-    setEditingDay(day);
-    setEditingMeal(meal);
     setShowEditModal(true);
   };
 
@@ -84,88 +100,52 @@ const KitchenAvailabilityTab = () => {
     }
   };
 
-  // Save availability settings
-  const saveAvailabilitySettings = async () => {
-    if (!editingDay || !editingMeal) return;
-
+  // Handle save changes
+  const handleSaveChanges = async () => {
     try {
-      setIsLoading(true);
-      
-      const dayKey = editingDay.toLowerCase();
-      
-      // Create updated settings object
-      const updatedSettings = {
-        ...availabilitySettings,
-        [dayKey]: {
-          ...(availabilitySettings?.[dayKey] || {}),
-          [editingMeal.id]: {
-            isAvailable: formData.isAvailable,
-            startTime: formData.startTime,
-            endTime: formData.endTime
-          }
-        }
-      };
-      
-      await mockKitchenAvailabilityService.updateKitchenAvailability(
+      // TODO: Implement API call to update availability
+      console.log('Update availability:', {
         kitchenId,
-        updatedSettings
-      );
+        day: editingDay,
+        slot: editingMeal,
+        availability: formData
+      });
       
-      // Update local state
-      setAvailabilitySettings(updatedSettings);
       setShowEditModal(false);
     } catch (err) {
       console.error('Failed to update kitchen availability:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Format time for display
-  const formatTime = (timeString) => {
-    try {
-      const [hours, minutes] = timeString.split(':');
-      const time = new Date();
-      time.setHours(parseInt(hours, 10));
-      time.setMinutes(parseInt(minutes, 10));
-      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (err) {
-      return timeString;
     }
   };
 
   // Get availability cell content
-  const getAvailabilityCell = (day, meal) => {
-    const dayKey = day.toLowerCase();
-    const daySettings = availabilitySettings?.[dayKey] || {};
-    const mealSettings = daySettings[meal.id] || { isAvailable: false };
+  const getAvailabilityCell = (day, slot) => {
+    const availability = getAvailabilityForDaySlot(day.id, slot.id);
     
-    if (mealSettings.isAvailable) {
+    if (availability?.isAvailable) {
+      const startTime = availability.customStartTime || availability.slot.defaultStartTime;
+      const endTime = availability.customEndTime || availability.slot.defaultEndTime;
+      
       return (
-        <div className="bg-green-50 text-center p-4 rounded-md">
+        <div className="bg-green-50 text-center p-3 rounded-md border border-green-200">
           <div className="flex items-center justify-center">
             <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />
             <span className="text-sm font-medium text-green-700">Available</span>
           </div>
           <div className="text-xs text-green-600 mt-1">
-            {formatTime(mealSettings.startTime)} - {formatTime(mealSettings.endTime)}
+            {formatTime(startTime)} - {formatTime(endTime)}
           </div>
         </div>
       );
     } else {
       return (
-        <div 
-          className="text-center p-4 cursor-pointer hover:bg-neutral-50 rounded-md"
-          onClick={() => handleEditTimeSlot(day, meal)}
-        >
+        <div className="text-center p-3 rounded-md border border-neutral-200">
           <div className="text-sm font-medium text-neutral-500">Not Available</div>
-          <div className="text-xs text-neutral-400 mt-1">Click to set</div>
         </div>
       );
     }
   };
 
-  if (isLoading && !availabilitySettings) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -183,38 +163,47 @@ const KitchenAvailabilityTab = () => {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-neutral-200">
-            <thead className="bg-neutral-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider w-1/4">
-                  Day
-                </th>
-                {mealPeriods.map(meal => (
-                  <th key={meal.id} scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    {meal.name}
+      {!canViewKitchenAvailability ? (
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-neutral-900 mb-2">Access Denied</h3>
+            <p className="text-neutral-500">You don't have permission to access the kitchen availability.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-neutral-200">
+              <thead className="bg-neutral-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider w-1/6">
+                    Day
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-neutral-200">
-              {daysOfWeek.map((day) => (
-                <tr key={day}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-neutral-900">{day}</div>
-                  </td>
-                  {mealPeriods.map(meal => (
-                    <td key={`${day}-${meal.id}`} className="px-6 py-4">
-                      {getAvailabilityCell(day, meal)}
-                    </td>
+                  {mealPeriods.map(slot => (
+                    <th key={slot.id} scope="col" className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                      {slot.label}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-neutral-200">
+                {daysOfWeek.map((day) => (
+                  <tr key={day.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-neutral-900">{day.name}</div>
+                    </td>
+                    {mealPeriods.map(slot => (
+                      <td key={`${day.id}-${slot.id}`} className="px-6 py-4">
+                        {getAvailabilityCell(day, slot)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Edit Time Slot Modal */}
       {showEditModal && editingDay && editingMeal && (
@@ -287,7 +276,7 @@ const KitchenAvailabilityTab = () => {
                 Cancel
               </button>
               <button
-                onClick={saveAvailabilitySettings}
+                onClick={handleSaveChanges}
                 className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium"
               >
                 Save Changes
