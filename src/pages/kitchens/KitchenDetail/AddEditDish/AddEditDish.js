@@ -663,14 +663,13 @@ const AddEditDish = () => {
           </div>
          
           <div className="mb-4">
-          <PermissionButton
-          permission="edit_kitchen"
+          <button
           onClick={handleAddVariation}
           className="px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors text-sm font-medium flex items-center"
         >
           <PlusIcon className="h-4 w-4 mr-1" />
           Add Variation
-        </PermissionButton>
+        </button>
           </div>
 
 {/* Display saved variations */}
