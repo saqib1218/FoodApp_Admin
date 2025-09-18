@@ -1,13 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useGetPartnerByIdQuery, useApprovePartnerMutation, useSuspendPartnerMutation } from '../../store/api/modules/partners/partnersApi';
+import { usePermissions } from '../../hooks/usePermissions';
+import { PERMISSIONS } from '../../contexts/PermissionRegistry';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 const PartenerDetail = () => {
   const { id } = useParams();
-  const [partener, setPartener] = useState(null);
+  const { hasPermission } = usePermissions();
+  
+  // Check permission first
+  const canViewPartnerDetail = hasPermission(PERMISSIONS.PARTNER_DETAIL_VIEW);
+  
+  // RTK Query to fetch partner data - only if user has permission
+  const { data: partnerResponse, isLoading, error } = useGetPartnerByIdQuery(id, {
+    skip: !canViewPartnerDetail || !id
+  });
+  
+  // Extract partner data from API response
+  const partener = partnerResponse?.data;
+  
+  // Debug: Log the actual partner detail API response structure
+  console.log('🔍 Partner Detail API Response Debug:');
+  console.log('- Full response:', partnerResponse);
+  console.log('- Partner data:', partener);
+  if (partener) {
+    console.log('- Partner role:', partener.role, typeof partener.role);
+    console.log('- Partner phone fields:', {
+      phone: partener.phone,
+      mobilenumber: partener.mobilenumber,
+      phoneNumber: partener.phoneNumber
+    });
+  }
+  
+  // RTK Query mutations for KYC actions
+  const [approvePartner, { isLoading: isApproving }] = useApprovePartnerMutation();
+  const [suspendPartner, { isLoading: isSuspending }] = useSuspendPartnerMutation();
+  
   const [activeTab, setActiveTab] = useState('info');
-  const [isLoading, setIsLoading] = useState(true);
   
   // Kitchen creation modal state
   const [showKitchenModal, setShowKitchenModal] = useState(false);
@@ -60,31 +91,18 @@ const PartenerDetail = () => {
     return '';
   };
 
+  // Initialize kitchen info from partner data when available
   useEffect(() => {
-    // This would be replaced with an API call in production
-    const fetchPartener = () => {
-      // Mock data for a single customer
-      const mockPartener = {
-        id: parseInt(id),
-        name: 'Ahmed Khan',
-        email: 'ahmed@example.com',
-        phone: '+92 300 1234567',
-        city: 'Lahore',
-        address: '123 Main Street, Block F, Gulberg III, Lahore',
-        status: 'active',
-        KYC:"active",
-        Pin:"active", 
-        cnicFront: 'https://example.com/cnic-front.jpg',
-        cnicBack: 'https://example.com/cnic-back.jpg',
-        joinedDate: '2023-01-15'
-      };
-
-      setPartener(mockPartener);
-      setIsLoading(false);
-    };
-
-    fetchPartener();
-  }, [id]);
+    if (partener && partener.kitchen) {
+      setKitchenInfo({
+        name: partener.kitchen.name || '',
+        tagline: partener.kitchen.tagline || '',
+        approvalStatus: partener.kitchen.approvalStatus || 'Pending for approval',
+        createdDate: partener.kitchen.createdAt ? new Date(partener.kitchen.createdAt).toISOString().split('T')[0] : '',
+        comment: ''
+      });
+    }
+  }, [partener]);
 
   // Handle kitchen creation
   const handleOpenKitchenModal = () => {
@@ -147,25 +165,36 @@ const PartenerDetail = () => {
     });
   };
 
-  const handleApprovePartner = () => {
-    // In a real app, this would call an API to update the partner status
-    setPartener({...partener, status: 'active'});
-    alert('Partner approved successfully!');
+  // Handle KYC approval
+  const handleApprovePartner = async () => {
+    try {
+      await approvePartner(partener.userId).unwrap();
+      alert('Partner KYC approved successfully!');
+      // The data will be automatically refetched due to cache invalidation
+    } catch (error) {
+      console.error('Failed to approve partner:', error);
+      alert('Failed to approve partner. Please try again.');
+    }
   };
 
-  // Handle reject partner
+  // Handle KYC rejection
   const handleRejectPartner = () => {
     setShowRejectModal(true);
   };
 
-  const handleConfirmReject = () => {
-    // In a real app, this would call an API to reject the partner
-    console.log('Rejecting partner with reason:', rejectReason, 'and comment:', rejectComment);
-    setPartener({...partener, status: 'rejected'});
-    setShowRejectModal(false);
-    setRejectReason('');
-    setRejectComment('');
-    alert('Partner rejected successfully!');
+  const handleConfirmReject = async () => {
+    try {
+      await suspendPartner(partener.userId).unwrap();
+      console.log('Rejecting partner with reason:', rejectReason, 'and comment:', rejectComment);
+      setShowRejectModal(false);
+      setRejectReason('');
+      setRejectComment('');
+      alert('Partner KYC rejected successfully!');
+      // The data will be automatically refetched due to cache invalidation
+    } catch (error) {
+      console.error('Failed to reject partner:', error);
+      alert('Failed to reject partner. Please try again.');
+    }
   };
 
   const handleCancelReject = () => {
@@ -208,6 +237,104 @@ const PartenerDetail = () => {
     }
   };
 
+  // Show access denied if user doesn't have permission
+  if (!canViewPartnerDetail) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            You don't have permission to view partner details. Please contact your administrator for access.
+          </p>
+          <Link
+            to="/partners"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Go Back to Partners
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if API call failed
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Partner</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Failed to load partner details. Please try again later.
+          </p>
+          <div className="flex space-x-3 justify-center">
+            <Link
+              to="/partners"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              Go Back
+            </Link>
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Partner Details</h3>
+          <p className="text-sm text-gray-500">
+            Please wait while we fetch the partner information...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show not found state if no partner data
+  if (!partener) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+            <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Partner Not Found</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            The partner you're looking for doesn't exist or has been removed.
+          </p>
+          <Link
+            to="/partners"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Go Back to Partners
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Header with back button */}
@@ -222,7 +349,7 @@ const PartenerDetail = () => {
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">{partener.name}</h1>
             <p className="text-sm text-gray-500">
-              Partner ID: {partener.id} • {getStatusBadge(partener.status)}
+              Partner ID: {partener.userId} • {getStatusBadge(partener.isActive ? 'active' : 'inactive')}
             </p>
           </div>
         </div>
@@ -288,7 +415,9 @@ const PartenerDetail = () => {
                   </div>
                   <div className="flex items-center">
                     <PhoneIcon className="h-5 w-5 text-gray-400 mr-2" />
-                    <p className="text-gray-900">{partener.phone}</p>
+                    <p className="text-gray-900">
+                      {partener.mobilenumber || partener.phone || partener.phoneNumber || 'No phone number'}
+                    </p>
                   </div>
                   {/* <div>
                     <p className="text-sm font-medium text-gray-500">Address</p>
@@ -306,19 +435,23 @@ const PartenerDetail = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Joined Date</p>
-                    <p className="mt-1 text-gray-900">{partener.joinedDate}</p>
+                    <p className="mt-1 text-gray-900">{partener.createdAt ? new Date(partener.createdAt).toLocaleDateString() : 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Status</p>
-                    <p className="mt-1">{getStatusBadge(partener.status)}</p>
+                    <p className="mt-1">{getStatusBadge(partener.isActive ? 'active' : 'inactive')}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">PIN Status</p>
-                    <p className="mt-1">{getStatusBadge(partener.Pin)}</p>
+                    <p className="text-sm font-medium text-gray-500">Role</p>
+                    <p className="mt-1 text-gray-900">
+                      {typeof partener.role?.name === 'string' ? partener.role.name :
+                       typeof partener.role === 'string' ? partener.role :
+                       typeof partener.role === 'object' ? JSON.stringify(partener.role) : 'Partner'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">KYC Verified</p>
-                    <p className="mt-1">{getStatusBadge(partener.KYC)}</p>
+                    <p className="mt-1">{getStatusBadge(partener.isKycVerified ? 'active' : 'inactive')}</p>
                   </div>
                   
                 </div>
@@ -331,7 +464,7 @@ const PartenerDetail = () => {
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-medium text-gray-900">Kitchen Information</h2>
-              {!kitchenInfo && (
+              {!partener.kitchen && (
                 <button
                   onClick={handleOpenKitchenModal}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -341,20 +474,20 @@ const PartenerDetail = () => {
               )}
             </div>
             
-            {kitchenInfo ? (
+            {partener.kitchen ? (
               <div className=" p-6 rounded-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Kitchen Name</h3>
-                    <p className="text-lg font-semibold text-gray-900">{kitchenInfo.name}</p>
+                    <p className="text-lg font-semibold text-gray-900">{partener.kitchen.name}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Kitchen Tagline</h3>
-                    <p className="text-gray-900">{kitchenInfo.tagline}</p>
+                    <p className="text-gray-900">{partener.kitchen.tagline || 'No tagline'}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Created Date</h3>
-                    <p className="text-gray-900">{kitchenInfo.createdDate}</p>
+                    <p className="text-gray-900">{partener.kitchen.createdAt ? new Date(partener.kitchen.createdAt).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -437,20 +570,62 @@ const PartenerDetail = () => {
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3">
-        <button
-          onClick={handleRejectPartner}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-        >
-          Reject
-        </button>
-        <button
-          onClick={handleApprovePartner}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none"
-        >
-          Approve KYC
-        </button>
+      {/* KYC Status and Actions */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div>
+            <h4 className="text-sm font-medium text-gray-900">KYC Verification Status</h4>
+            <p className="text-sm text-gray-500 mt-1">
+              {partener.isKycVerified ? 'This partner has been verified and approved.' : 'This partner is pending KYC verification.'}
+            </p>
+          </div>
+          <div className="flex items-center">
+            {partener.isKycVerified ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                ✓ KYC Approved
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                ⏳ Pending Verification
+              </span>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Action Buttons - Only show if KYC is not verified */}
+      {!partener.isKycVerified && (
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={handleRejectPartner}
+            disabled={isApproving || isSuspending}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSuspending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
+                Rejecting...
+              </>
+            ) : (
+              'Reject KYC'
+            )}
+          </button>
+          <button
+            onClick={handleApprovePartner}
+            disabled={isApproving || isSuspending}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isApproving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Approving...
+              </>
+            ) : (
+              'Approve KYC'
+            )}
+          </button>
+        </div>
+      )}
     </div>
   </div>
 )}

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGetKitchenPartnersQuery } from '../../../store/api/modules/kitchens/kitchensApi';
 import { useAuth } from '../../../hooks/useAuth';
 import { PermissionButton } from '../../../components/PermissionGate';
 import { KitchenContext } from './index';
 import { PERMISSIONS } from '../../../contexts/PermissionRegistry';
-import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, UserPlusIcon, ClipboardDocumentIcon, PencilIcon, TrashIcon, EyeIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const KitchenPartnersTab = () => {
   const { id: kitchenId } = useContext(KitchenContext);
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   
   // Check permission first
   const canViewKitchenPartners = hasPermission(PERMISSIONS.KITCHEN_PARTNER_LIST_VIEW);
@@ -175,6 +177,29 @@ const KitchenPartnersTab = () => {
     setSelectedUser(null);
     setEditUserForm({ name: '', email: '', mobileNumber: '', role: '', status: '' });
     setUpdateComment('');
+  };
+
+  // Handle chat with user
+  const handleChatWithUser = (user) => {
+    console.log('KitchenPartnersTab - Chat clicked for user:', user);
+    
+    // Try different possible ID properties and use index as fallback
+    const userId = user.id || user.userId || user.ID || user.user_id || user.partnerId || Date.now();
+    
+    const navigationData = {
+      partnerId: userId,
+      partnerName: user.name,
+      partnerEmail: user.email,
+      partnerPhone: user.mobilenumber || user.phone,
+      openChat: true
+    };
+    
+    console.log('KitchenPartnersTab - Navigating with data:', navigationData);
+    
+    // Navigate to engagement page with user information
+    navigate('/engagement', {
+      state: navigationData
+    });
   };
 
   // Handle status update
@@ -423,6 +448,13 @@ const KitchenPartnersTab = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleChatWithUser(user)}
+                        className="text-purple-600 hover:text-purple-900 transition-colors"
+                        title="Chat with user"
+                      >
+                        <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => handleEditUser(user)}
                         className="text-blue-600 hover:text-blue-900 transition-colors"

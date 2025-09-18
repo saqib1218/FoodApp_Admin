@@ -1,12 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MagnifyingGlassIcon, FunnelIcon, EyeIcon, PencilIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, KeyIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useGetPartnersQuery } from '../../store/api/modules/partners/partnersApi';
+import { usePermissions } from '../../hooks/usePermissions';
+import { PERMISSIONS } from '../../contexts/PermissionRegistry';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 const PartenerList = () => {
-  const [parteners, setParteners] = useState([]);
+  const { hasPermission } = usePermissions();
+  
+  // Check permission first
+  const canViewPartnerList = hasPermission(PERMISSIONS.PARTNER_LIST_VIEW);
+  
+  // Permission check is working correctly now
+  
+  // RTK Query to fetch partners data - only if user has permission
+  const { data: partnersResponse, isLoading, error } = useGetPartnersQuery({
+    page: 1,
+    limit: 50
+  }, {
+    skip: !canViewPartnerList
+  });
+  
+  // Extract partners data from API response
+  const partners = partnersResponse?.data || [];
+  
+  // Debug: Log the actual API response structure
+  console.log('🔍 Partners API Response Debug:');
+  console.log('- Full response:', partnersResponse);
+  console.log('- Partners data:', partners);
+  if (partners.length > 0) {
+    console.log('- First partner structure:', partners[0]);
+    console.log('- Partner name type:', typeof partners[0]?.name);
+    console.log('- Partner name value:', partners[0]?.name);
+  }
+  
   const [filteredParteners, setFilteredParteners] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
     const [showConfirmationModal, setShowConfirmationModal] = useState(false);
     const [confirmationAction, setConfirmationAction] = useState(null);
@@ -37,8 +66,8 @@ const PartenerList = () => {
     confirmPin: ''
   });
   const handleTogglePartenerStatus = (partnerId) => {
-    const partner = parteners.find(p => p.id === partnerId);
-    const newStatus = !partner.status;
+    const partner = partners.find(p => p.userId === partnerId);
+    const newStatus = !partner.isActive;
     
     setConfirmationAction('status');
     setPendingAction({ partnerId, partnerName: partner.name, newStatus });
@@ -46,70 +75,16 @@ const PartenerList = () => {
     setConfirmationComment('');
   };
 
-  // Mock data for partners
+  // Update filtered partners when API data changes
   useEffect(() => {
-    // This would be replaced with an API call in production
-    const mockParteners = [
-      {
-        id: 101,
-        name: 'Ahmed Khan',
-        kitchenName: 'Khan\'s Kitchen',
-        email: 'ahmed@example.com',
-        phone: '+92 300 1234567',
-        role:"owner",
-        status: true,
-        joinedDate: '2023-01-15'
-      },
-      {
-        id: 102,
-        name: 'Sara Ali',
-        kitchenName: 'Sara\'s Delights',
-        email: 'sara@example.com',
-        phone: '+92 301 2345678',
-        role: 'owner',
-        status: true,
-        joinedDate: '2023-02-20'
-      },
-      {
-        id: 103,
-        name: 'Bilal Ahmad',
-        kitchenName: '',
-        email: 'bilal@example.com',
-        phone: '+92 302 3456789',
-        role: 'owner',
-        status: false,
-        joinedDate: '2023-03-10'
-      },
-      {
-        id: 104,
-        name: 'Ayesha Malik',
-        kitchenName: 'Ayesha\'s Traditional Kitchen',
-        email: 'ayesha@example.com',
-        phone: '+92 303 4567890',
-        role: 'owner',
-        status: true,
-        joinedDate: '2023-01-05'
-      },
-      {
-        id: 105,
-        name: 'Zainab Hussain',
-        kitchenName: 'Zainab\'s Homemade',
-        email: 'zainab@example.com',
-        phone: '+92 304 5678901',
-        role: 'owner',
-        status: true,
-        joinedDate: '2023-04-12'
-      }
-    ];
-
-    setParteners(mockParteners);
-    setFilteredParteners(mockParteners);
-    setIsLoading(false);
-  }, []);
+    if (partners && partners.length > 0) {
+      setFilteredParteners(partners);
+    }
+  }, [partners]);
 
   // Filter partners based on search term and filters
   useEffect(() => {
-    let result = parteners;
+    let result = partners;
 
     // Apply search term filter
     if (searchTerm) {
@@ -163,7 +138,7 @@ const PartenerList = () => {
     }
 
     setFilteredParteners(result);
-  }, [searchTerm, filters, parteners]);
+  }, [partners, searchTerm, filters]);
 
   // Sorting function
   const handleSort = (key) => {
@@ -199,21 +174,19 @@ const PartenerList = () => {
   }, [filteredParteners, sortConfig]);
 
   // Get unique cities and statuses for filter dropdowns
-  const cities = [...new Set(parteners.map(partener => partener.role))];
+  const cities = [...new Set(partners.map(partner => partner.role))];
   const statuses = ['active', 'inactive'];
 
   // Handle status toggle
   const handleStatusToggle = (partnerId) => {
-    setParteners(prev => prev.map(partner => 
-      partner.id === partnerId 
-        ? { ...partner, status: !partner.status }
-        : partner
-    ));
+    // TODO: Implement API call to toggle partner status
+    console.log('Toggle status for partner:', partnerId);
+    alert('Status toggle functionality will be implemented with API integration.');
   };
 
   // Handle edit action
   const handleEdit = (partnerId) => {
-    const partner = parteners.find(p => p.id === partnerId);
+    const partner = partners.find(p => p.userId === partnerId);
     setSelectedPartner(partner);
     setEditForm({
       name: partner.name,
@@ -288,11 +261,9 @@ const PartenerList = () => {
   // Handle confirm status change
   const handleConfirmStatusChange = () => {
     if (pendingAction && confirmationComment.trim()) {
-      setParteners(prev => prev.map(partner => 
-        partner.id === pendingAction.partnerId 
-          ? { ...partner, status: pendingAction.newStatus }
-          : partner
-      ));
+      // TODO: Implement API call to update partner status
+      console.log('Update partner status:', pendingAction);
+      alert('Status update functionality will be implemented with API integration.');
       setShowConfirmationModal(false);
       setConfirmationComment('');
       setPendingAction(null);
@@ -302,7 +273,9 @@ const PartenerList = () => {
   // Handle confirm delete
   const handleConfirmDelete = () => {
     if (pendingAction && confirmationComment.trim()) {
-      setParteners(prev => prev.filter(partner => partner.id !== pendingAction.partnerId));
+      // TODO: Implement API call to delete partner
+      console.log('Delete partner:', pendingAction);
+      alert('Delete functionality will be implemented with API integration.');
       setShowConfirmationModal(false);
       setConfirmationComment('');
       setPendingAction(null);
@@ -312,11 +285,9 @@ const PartenerList = () => {
   // Handle confirm edit
   const handleConfirmEdit = () => {
     if (pendingAction && confirmationComment.trim()) {
-      setParteners(prev => prev.map(partner => 
-        partner.id === pendingAction.partnerId 
-          ? { ...partner, ...pendingAction.editData }
-          : partner
-      ));
+      // TODO: Implement API call to update partner
+      console.log('Update partner:', pendingAction);
+      alert('Edit functionality will be implemented with API integration.');
       setShowEditModal(false);
       setShowConfirmationModal(false);
       setConfirmationComment('');
@@ -341,7 +312,7 @@ const PartenerList = () => {
 
   // Handle delete action
   const handleRemovePartener = (partnerId) => {
-    const partner = parteners.find(partner => partner.id === partnerId);
+    const partner = partners.find(partner => partner.userId === partnerId);
     
     setConfirmationAction('delete');
     setPendingAction({ partnerId, partnerName: partner.name });
@@ -357,6 +328,56 @@ const PartenerList = () => {
       status: ''
     });
   };
+
+  // Show access denied if user doesn't have permission
+  if (!canViewPartnerList) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            You don't have permission to view the partner list. Please contact your administrator for access.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if API call failed
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Partners</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Failed to load partner data. Please try again later.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -580,27 +601,54 @@ const PartenerList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedParteners.map((partner) => (
-                  <tr key={partner.id} className="hover:bg-gray-50">
+                {sortedParteners.map((partner, index) => {
+                  // Debug each partner before rendering
+                  console.log(`Partner ${index}:`, partner);
+                  console.log(`Partner name:`, partner.name, typeof partner.name);
+                  console.log(`Partner phone:`, partner.phone, typeof partner.phone);
+                  
+                  return (
+                  <tr key={partner.userId || partner.id || index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{partner.name}</div>
-                      <div className="text-sm text-gray-500">{partner.phone}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {typeof partner.name === 'string' ? partner.name : 
+                         typeof partner.name === 'object' ? JSON.stringify(partner.name) : 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        📱 {typeof partner.mobilenumber === 'string' ? partner.mobilenumber :
+                         typeof partner.phone === 'string' ? partner.phone :
+                         typeof partner.phoneNumber === 'string' ? partner.phoneNumber :
+                         typeof partner.mobileNumber === 'string' ? partner.mobileNumber :
+                         typeof partner.mobile === 'string' ? partner.mobile :
+                         typeof partner.phone === 'object' ? JSON.stringify(partner.phone) : 'No Mobile'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{partner.kitchenName}</div>
+                      <div className="text-sm text-gray-900">
+                        {typeof partner.kitchen?.name === 'string' ? partner.kitchen.name :
+                         typeof partner.kitchenName === 'string' ? partner.kitchenName :
+                         typeof partner.kitchen === 'object' ? 'Kitchen Object' : 'No Kitchen'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{partner.email}</div>
+                      <div className="text-sm text-gray-900">
+                        {typeof partner.email === 'string' ? partner.email :
+                         typeof partner.email === 'object' ? JSON.stringify(partner.email) : 'N/A'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{partner.role}</div>
+                      <div className="text-sm text-gray-900">
+                        {typeof partner.role?.name === 'string' ? partner.role.name :
+                         typeof partner.role === 'string' ? partner.role :
+                         typeof partner.role === 'object' ? JSON.stringify(partner.role) : 'Partner'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={partner.status}
-                          onChange={() => handleTogglePartenerStatus(partner.id)}
+                          checked={partner.isActive || partner.status || false}
+                          onChange={() => handleTogglePartenerStatus(partner.userId || partner.id)}
                           className="sr-only peer"
                         />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:bg-primary-600 transition-colors"></div>
@@ -610,14 +658,14 @@ const PartenerList = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-3">
                         <Link
-                          to={`/parteners/${partner.id}`}
+                          to={`/parteners/${partner.userId || partner.id}`}
                           className="text-primary-600 hover:text-primary-900 transition-colors"
                           title="View partner"
                         >
                           <EyeIcon className="h-5 w-5" />
                         </Link>
                         <button
-                          onClick={() => handleEdit(partner.id)}
+                          onClick={() => handleEdit(partner.userId || partner.id)}
                           className="text-blue-600 hover:text-blue-900 transition-colors"
                           title="Edit partner"
                         >
@@ -631,7 +679,7 @@ const PartenerList = () => {
                           <KeyIcon className="h-5 w-5" />
                         </button>
                         <button
-                          onClick={() => handleRemovePartener(partner.id)}
+                          onClick={() => handleRemovePartener(partner.userId || partner.id)}
                           className="text-red-600 hover:text-red-900 transition-colors"
                           title="Delete partner"
                         >
@@ -640,7 +688,8 @@ const PartenerList = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>

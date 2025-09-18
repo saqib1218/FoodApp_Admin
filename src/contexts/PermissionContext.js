@@ -20,13 +20,13 @@ export const PermissionProvider = ({ children }) => {
   const [userId, setUserId] = useState(null);
 
   // Clear permissions on logout
-  const clearPermissions = () => {
+  const clearPermissions = React.useCallback(() => {
     setUserPermissions([]);
     setPermissionKeys([]);
     setIsPermissionsLoaded(false);
     setUserId(null);
-    console.log('PermissionContext: Permissions cleared on logout');
-  };
+    // console.log('PermissionContext: Permissions cleared on logout');
+  }, []);
 
   // Get user ID and check for pre-loaded permissions from encrypted session storage
   useEffect(() => {
@@ -34,19 +34,19 @@ export const PermissionProvider = ({ children }) => {
       try {
         // Use the correct session storage key from AuthContext
         const encryptedUserData = sessionStorage.getItem('user_info');
-        console.log('PermissionContext: Encrypted user data:', encryptedUserData);
+        // console.log('PermissionContext: Encrypted user data:', encryptedUserData);
         
         if (encryptedUserData) {
           const userData = decryptData(encryptedUserData);
-          console.log('PermissionContext: Decrypted user data:', userData);
+          // console.log('PermissionContext: Decrypted user data:', userData);
           
           if (userData && userData.id) {
-            console.log('PermissionContext: Setting userId:', userData.id);
+            // console.log('PermissionContext: Setting userId:', userData.id);
             setUserId(userData.id);
             
             // Check if permissions were already loaded during login
             if (userData.fetchedPermissions && userData.permissionKeys) {
-              console.log('PermissionContext: Using pre-loaded permissions from login');
+              // console.log('PermissionContext: Using pre-loaded permissions from login');
               setUserPermissions(userData.fetchedPermissions);
               setPermissionKeys(userData.permissionKeys);
               setIsPermissionsLoaded(true);
@@ -78,7 +78,7 @@ export const PermissionProvider = ({ children }) => {
     }, 1000); // Check every second
 
     return () => clearInterval(checkInterval);
-  }, [userId, userPermissions.length, isPermissionsLoaded, clearPermissions]);
+  }, []); // Remove dependencies to prevent infinite loop
 
   // Fetch user permissions when userId is available
   const { 
@@ -90,13 +90,13 @@ export const PermissionProvider = ({ children }) => {
     skip: !userId // Only fetch when userId is available
   });
 
-  // Debug RTK Query state
-  useEffect(() => {
-    console.log('PermissionContext: userId changed:', userId);
-    console.log('PermissionContext: isLoadingPermissions:', isLoadingPermissions);
-    console.log('PermissionContext: permissionsError:', permissionsError);
-    console.log('PermissionContext: permissionsData:', permissionsData);
-  }, [userId, isLoadingPermissions, permissionsError, permissionsData]);
+  // Debug RTK Query state (commented out to reduce console noise)
+  // useEffect(() => {
+  //   console.log('PermissionContext: userId changed:', userId);
+  //   console.log('PermissionContext: isLoadingPermissions:', isLoadingPermissions);
+  //   console.log('PermissionContext: permissionsError:', permissionsError);
+  //   console.log('PermissionContext: permissionsData:', permissionsData);
+  // }, [userId, isLoadingPermissions, permissionsError, permissionsData]);
 
   // Update permissions when data is fetched
   useEffect(() => {

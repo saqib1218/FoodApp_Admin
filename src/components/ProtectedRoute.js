@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
+import { ROUTE_PERMISSIONS } from '../contexts/PermissionRegistry';
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -30,10 +31,22 @@ const ProtectedRoute = ({ permission, routeName, requireAll = false, children })
     hasPermission, 
     hasAllPermissions, 
     hasAnyPermission, 
-    navigation,
-    isPermissionsLoaded
+    isPermissionsLoaded,
+    permissionKeys
   } = usePermissions();
   const location = useLocation();
+
+  // Console log all user permissions for debugging
+  if (isPermissionsLoaded && permissionKeys) {
+    console.log('🔍 ALL USER PERMISSIONS:');
+    console.log('Total permissions count:', permissionKeys.length);
+    console.log('Permissions array:', permissionKeys);
+    console.log('\n📋 Formatted permissions list:');
+    permissionKeys.forEach((permission, index) => {
+      console.log(`${index + 1}. ${permission}`);
+    });
+    console.log('\n' + '='.repeat(50));
+  }
 
   // Show loading spinner while checking authentication or permissions
   if (isLoading || !isPermissionsLoaded) {
@@ -46,8 +59,15 @@ const ProtectedRoute = ({ permission, routeName, requireAll = false, children })
   }
 
   // Check route-based permission if routeName is provided
-  if (routeName && !navigation.canAccessRoute(routeName)) {
-    return <Navigate to="/unauthorized" replace />;
+  if (routeName) {
+    const requiredPermissions = ROUTE_PERMISSIONS[routeName];
+    if (requiredPermissions && requiredPermissions.length > 0) {
+      // Check if user has any of the required permissions for this route
+      const hasRouteAccess = requiredPermissions.some(permission => hasPermission(permission));
+      if (!hasRouteAccess) {
+        return <Navigate to="/unauthorized" replace />;
+      }
+    }
   }
 
   // Check specific permission requirement if specified

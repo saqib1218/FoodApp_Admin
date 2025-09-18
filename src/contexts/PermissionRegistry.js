@@ -39,6 +39,8 @@ export const PERMISSIONS = {
 
   // Partner Management
   PARTNER_VIEW: 'admin.partner.view',
+  PARTNER_LIST_VIEW: 'admin.partner.list.view',
+  PARTNER_DETAIL_VIEW: 'admin.partner.detail.view',
 
   // Customer Management
   CUSTOMER_VIEW: 'admin.customer.view',
@@ -68,7 +70,8 @@ export const ROUTE_PERMISSIONS = {
   'kitchens': [PERMISSIONS.KITCHEN_VIEW],
   'orders': [PERMISSIONS.ORDER_VIEW],
   'customers': [PERMISSIONS.CUSTOMER_VIEW],
-  'partners': [PERMISSIONS.PARTNER_VIEW],
+  'partners': [PERMISSIONS.PARTNER_LIST_VIEW],
+  'partner-detail': [PERMISSIONS.PARTNER_DETAIL_VIEW],
   'users': [PERMISSIONS.USER_LIST_VIEW],
   'user-management': [PERMISSIONS.USER_LIST_VIEW],
   'feedback': [PERMISSIONS.FEEDBACK_VIEW],

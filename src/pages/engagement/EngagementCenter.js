@@ -1,115 +1,95 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PaperAirplaneIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
 const EngagementCenter = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Get partner data from navigation state
+  const partnerData = location.state || {};
+  const { partnerId, partnerName, partnerEmail, partnerPhone, openChat } = partnerData;
+  
+  // Debug: Log the received data
+  console.log('EngagementCenter - Received navigation data:', partnerData);
+  console.log('Partner details:', { partnerId, partnerName, partnerEmail, partnerPhone, openChat });
 
-  // Mock data for conversations
+  // Load conversations - handle partner data from navigation
   useEffect(() => {
-    // This would be replaced with an API call in production
-    const mockConversations = [
-      {
-        id: 1,
+    console.log('EngagementCenter useEffect - Checking partner data:', { partnerId, partnerName, openChat });
+    
+    // If coming from kitchen partners tab with specific partner data
+    if (partnerId && partnerName && openChat) {
+      console.log('Creating partner conversation for:', partnerName);
+      const partnerConversation = {
+        id: partnerId,
         customer: {
-          id: 101,
-          name: 'Ahmed Khan',
+          id: partnerId,
+          name: partnerName,
+          email: partnerEmail,
+          phone: partnerPhone,
           avatar: null
         },
         lastMessage: {
-          text: 'I have a question about my order #ORD-001',
-          timestamp: '2023-06-27 18:30',
-          isCustomer: true
-        },
-        unread: 2
-      },
-      {
-        id: 2,
-        customer: {
-          id: 102,
-          name: 'Sara Ali',
-          avatar: null
-        },
-        lastMessage: {
-          text: 'Thank you for your assistance!',
-          timestamp: '2023-06-27 17:15',
-          isCustomer: true
-        },
-        unread: 0
-      },
-      {
-        id: 3,
-        customer: {
-          id: 103,
-          name: 'Bilal Ahmad',
-          avatar: null
-        },
-        lastMessage: {
-          text: 'Your order has been dispatched and will arrive shortly.',
-          timestamp: '2023-06-27 16:45',
+          text: 'Start a conversation with this partner',
+          timestamp: new Date().toISOString(),
           isCustomer: false
         },
-        unread: 0
-      },
-      {
-        id: 4,
-        customer: {
-          id: 104,
-          name: 'Ayesha Malik',
-          avatar: null
-        },
-        lastMessage: {
-          text: 'Is there any update on my refund request?',
-          timestamp: '2023-06-26 14:20',
-          isCustomer: true
-        },
-        unread: 1
-      }
-    ];
-
-    setConversations(mockConversations);
+        unread: 0,
+        isPartner: true // Flag to identify partner conversations
+      };
+      
+      // Set this as the only conversation and auto-select it with messages
+      setConversations([partnerConversation]);
+      
+      // Initialize messages for the partner conversation
+      const initialMessages = [
+        {
+          id: 1,
+          text: `Chat started with ${partnerName}`,
+          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          isCustomer: false,
+          isSystem: true
+        }
+      ];
+      
+      const selectedConv = {
+        ...partnerConversation,
+        messages: initialMessages
+      };
+      
+      console.log('Setting selected conversation:', selectedConv);
+      setSelectedConversation(selectedConv);
+    } else {
+      // Load conversations from API or keep empty if no data
+      // TODO: Replace with actual API call to fetch conversations
+      setConversations([]);
+    }
+    
     setIsLoading(false);
-  }, []);
+  }, [partnerId, partnerName, partnerEmail, partnerPhone, openChat]);
 
-  // Mock data for messages in a conversation
+  // Fetch messages for a conversation
   const fetchMessages = (conversationId) => {
-    // This would be replaced with an API call in production
-    const mockMessages = [
-      {
-        id: 1,
-        text: 'Hello! I have a question about my order #ORD-001',
-        timestamp: '2023-06-27 18:30',
-        isCustomer: true
-      },
-      {
-        id: 2,
-        text: 'Hi Ahmed! How can I help you with your order today?',
-        timestamp: '2023-06-27 18:32',
-        isCustomer: false
-      },
-      {
-        id: 3,
-        text: 'I noticed that one item is missing from my delivery',
-        timestamp: '2023-06-27 18:33',
-        isCustomer: true
-      },
-      {
-        id: 4,
-        text: 'I ordered 4 naan but only received 2',
-        timestamp: '2023-06-27 18:33',
-        isCustomer: true
-      },
-      {
-        id: 5,
-        text: "I'm sorry to hear that. Let me check with the kitchen and get back to you right away.",
-        timestamp: '2023-06-27 18:35',
-        isCustomer: false
-      }
-    ];
-
-    return mockMessages;
+    // TODO: Replace with actual API call to fetch messages for the conversation
+    // For now, return empty array for regular conversations
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (conversation?.isPartner) {
+      return [
+        {
+          id: 1,
+          text: `Chat started with ${conversation.customer.name}`,
+          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          isCustomer: false,
+          isSystem: true
+        }
+      ];
+    }
+    return [];
   };
 
   const handleSelectConversation = (conversation) => {
@@ -123,7 +103,7 @@ const EngagementCenter = () => {
     const messages = fetchMessages(conversation.id);
     setSelectedConversation({
       ...conversation,
-      messages
+      messages: messages || []
     });
   };
 
